@@ -1,42 +1,528 @@
 <!doctype html>
 <html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#08070b">
-<meta name="description" content="Ozzvon POS y OZZVAN POR: puntos de venta para comercios y restaurantes. Ventas, inventario, compras, clientes, menús, pedidos y reportes.">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Ozzvon — Punto de venta para tu operación">
-<meta property="og:description" content="Dos puntos de venta para tareas reales de comercios y restaurantes.">
-<link rel="canonical" href="./">
-<link rel="icon" href="./ozzvon-logo.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css">
-<title>Ozzvon — Punto de venta para comercios y restaurantes</title>
-</head>
-<body>
-<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
-<header class="site-header" id="inicio">
-  <a class="brand" href="#inicio" aria-label="Ozzvon, inicio"><img src="./ozzvon-logo.svg" alt="" aria-hidden="true"><span>ozzvon<span class="dot">.</span></span></a>
-  <nav class="desktop-nav" id="site-nav" aria-label="Navegación principal"><a href="#productos">Productos</a><a href="#comercio">Ozzvon POS</a><a href="#restaurantes">OZZVAN POR</a><a href="#seguridad">Seguridad</a></nav>
-  <a class="button button-ghost header-cta" href="#contacto">Hablar con Ozzvon <span>↗</span></a>
-  <button class="menu-toggle" type="button" aria-label="Abrir menú" aria-controls="site-nav" aria-expanded="false"><span></span><span></span></button>
-</header>
-<main>
-<section class="hero page-width">
-  <div class="hero-copy reveal"><p class="eyebrow"><i></i> Software para la operación real</p><h1>Ordena tu operación.<br><em>Vende con claridad.</em></h1><p class="hero-text">Dos puntos de venta Ozzvon para resolver tareas concretas: administra productos y ventas en tu comercio, o coordina pedidos y menús en tu restaurante.</p><div class="hero-actions"><a class="button button-primary" href="#productos">Ver los productos <span>↓</span></a><a class="text-link" href="#contacto">Cuéntanos de tu negocio <span>↗</span></a></div><div class="hero-note"><span>✓</span> Sin promesas inventadas · funciones documentadas en tus aplicaciones</div></div>
-  <div class="hero-product reveal delay-1"><div class="product-tabs" role="tablist"><button class="product-tab active" data-product="pos" role="tab" aria-selected="true">OZZVON POS</button><button class="product-tab" data-product="por" role="tab" aria-selected="false">OZZVAN POR</button></div><div class="product-frame"><div class="frame-bar"><span class="window-dots"><i></i><i></i><i></i></span><span class="frame-title">Captura real · aplicación original</span><span class="live-pill"><i></i> Producto</span></div><figure class="product-shot active" data-shot="pos"><img src="./real-assets/ozzvon-pos-dashboard.png" alt="Pantalla real del inicio de OZZVON POS con ventas del día, efectivo, transferencia y tarjeta, por cobrar y ventas de la semana"><figcaption>Inicio · resumen del día</figcaption></figure><figure class="product-shot" data-shot="por"><img src="./real-assets/ozzvan-por-nuevo-pedido.png" alt="Pantalla real de nuevo pedido de OZZVAN POR con mesa, para llevar, domicilio y selección de mesas"><figcaption>Nuevo pedido · mesa, para llevar y domicilio</figcaption></figure></div><p class="real-note"><span>●</span> Pantallas reales extraídas de tus softwares · sin mockups</p></div>
-</section>
-<section class="trust-strip page-width reveal"><span>Hecho para tareas que sí pasan todos los días</span><div><b>Ventas</b><b>Inventario</b><b>Pedidos</b><b>Reportes</b></div></section>
-<section class="intro page-width" id="productos"><div class="section-kicker reveal">01 — Dos productos, dos flujos</div><div class="intro-grid"><h2 class="reveal">Elige la operación<br><em>que se parece a la tuya.</em></h2><p class="reveal delay-1">Ozzvon POS y OZZVAN POR no son la misma pantalla con otro nombre. Cada aplicación está organizada alrededor de las tareas que necesita un comercio o un restaurante.</p></div><div class="product-cards"><article class="product-card reveal"><span class="product-no">01 / COMERCIO</span><img src="./real-assets/ozzvon-pos-inventory.png" alt="Pantalla real de inventario de OZZVON POS" loading="lazy"><div><h3>OZZVON POS</h3><p>Para registrar ventas, llevar inventario, gestionar compras, clientes, créditos y reportes.</p><a href="#comercio">Ver funciones <span>↗</span></a></div></article><article class="product-card product-card-purple reveal delay-1"><span class="product-no">02 / RESTAURANTES</span><img src="./real-assets/ozzvan-por-nuevo-pedido.png" alt="Pantalla real de nuevo pedido de OZZVAN POR" loading="lazy"><div><h3>OZZVAN POR</h3><p>Para trabajar con menús, categorías, productos, mesas, domicilio, para llevar y comandas.</p><a href="#restaurantes">Ver funciones <span>↗</span></a></div></article></div></section>
-<section class="product-section page-width" id="comercio"><div class="section-kicker reveal">02 — Comercio</div><div class="product-detail-grid"><div class="detail-copy reveal"><span class="number-tag">01</span><h2>OZZVON<br><em>POS</em></h2><p class="lead">Un punto de venta para administrar la operación comercial desde una sola aplicación.</p><div class="feature-list"><div><b>Ventas</b><p>Busca, agrega y cobra productos. La aplicación contempla efectivo, transferencia, tarjeta, crédito y solicitud de factura desde una venta.</p></div><div><b>Inventario y compras</b><p>Administra catálogo, códigos y existencias; registra proveedores y entradas de mercancía.</p></div><div><b>Clientes y créditos</b><p>Consulta clientes, saldos, abonos y operaciones pendientes.</p></div><div><b>Reportes y caja</b><p>Revisa ventas y ganancia bruta; abre caja, registra movimientos y realiza el corte.</p></div></div><a class="text-link" href="#contacto">Preguntar por OZZVON POS <span>↗</span></a></div><div class="real-screen reveal delay-1"><div class="screen-label"><span><i></i> OZZVON POS · CAPTURA REAL</span><span>Inventario</span></div><img src="./real-assets/ozzvon-pos-inventory.png" alt="Captura real del inventario de OZZVON POS" loading="lazy"><p>La captura conserva la navegación y los estados reales de la aplicación: Inicio, Ventas, Inventario, Compras, Clientes y créditos, Reportes, Corte de caja, Usuarios y Ajustes.</p></div></div></section>
-<section class="restaurant-section" id="restaurantes"><div class="page-width"><div class="section-kicker reveal">03 — Restaurantes</div><div class="product-detail-grid reverse"><div class="real-screen restaurant-screen reveal"><div class="screen-label"><span><i></i> OZZVAN POR · CAPTURA REAL</span><span>Nuevo pedido</span></div><img src="./real-assets/ozzvan-por-nuevo-pedido.png" alt="Captura real de nuevo pedido de OZZVAN POR" loading="lazy"><p>La aplicación muestra su flujo real de pedido con Mesa, Para llevar, Domicilio, selección de mesas, nombre del cliente, notas y total.</p></div><div class="detail-copy reveal delay-1"><span class="number-tag coral">02</span><h2>OZZVAN<br><em>POR</em></h2><p class="lead">Punto de venta para restaurantes con menú organizado y seguimiento del pedido hasta su conclusión.</p><div class="feature-list"><div><b>Pedidos por servicio</b><p>Trabaja con Mesa, Domicilio y Para llevar; agrega cliente, dirección, teléfono y notas cuando corresponda.</p></div><div><b>Menús y productos</b><p>Crea menús, categorías y productos con tamaños y precios, y cambia entre menús guardados.</p></div><div><b>Estados de pedido</b><p>Consulta pedidos pendientes, en preparación o envío, concluidos y cancelados.</p></div><div><b>Comandas y venta</b><p>Personaliza las variantes de cocina o venta para cada servicio y genera la comanda sin precios o el comprobante.</p></div></div><a class="text-link" href="#contacto">Preguntar por OZZVAN POR <span>↗</span></a></div></div></div></section>
-<section class="workflow page-width" id="seguridad"><div class="section-kicker reveal">04 — Lo que sí está respaldado</div><div class="workflow-head"><h2 class="reveal">Más que una pantalla:<br><em>una operación entendible.</em></h2><p class="reveal delay-1">La información de esta web sale de tus README, HTML, JavaScript y backends. No agregamos módulos que no estén en tus aplicaciones.</p></div><div class="workflow-grid"><article class="reveal"><span>01</span><b>Datos locales en POR</b><p>OZZVAN POR usa SQLite local; su base se crea automáticamente y comparte menú y pedidos entre las ventanas conectadas al mismo servidor.</p></article><article class="reveal delay-1"><span>02</span><b>API para POS</b><p>OZZVON POS trabaja mediante API y contempla conexión a base remota, clientes autenticados y sincronización de cambios en tiempo real.</p></article><article class="reveal delay-2"><span>03</span><b>Protecciones documentadas</b><p>El paquete describe sesión, permisos por rol, cabeceras de seguridad, CORS configurado y recomendaciones para backend remoto con HTTPS.</p></article></div></section>
-<section class="faq page-width"><div class="section-kicker reveal">05 — Preguntas frecuentes</div><div class="faq-list reveal delay-1"><details open><summary>¿Cuál es para mi negocio?<span>+</span></summary><p>OZZVON POS está orientado a comercios con ventas, inventario, compras, clientes y caja. OZZVAN POR está orientado a restaurantes con menú, mesas, domicilio, pedidos para llevar y comandas.</p></details><details><summary>¿Puedo usarlo en Windows?<span>+</span></summary><p>Los dos proyectos incluyen lanzadores y configuración para aplicación de escritorio en Windows. OZZVON POS documenta la construcción de un ejecutable con PyInstaller y OZZVAN POR incluye su propio archivo de construcción.</p></details><details><summary>¿Los datos se guardan en la aplicación?<span>+</span></summary><p>Depende del producto y la configuración. OZZVAN POR usa SQLite local. OZZVON POS está preparado para trabajar con una API y su documentación contempla una base remota; no se deben colocar credenciales de base de datos en el frontend.</p></details><details><summary>¿Las pantallas de esta web son reales?<span>+</span></summary><p>Sí. Las imágenes mostradas fueron renderizadas desde los HTML, CSS y JavaScript incluidos en tu archivo WEB.rar. Las etiquetas indican qué aplicación y vista corresponde a cada captura.</p></details></div></section>
-<section class="contact-section" id="contacto"><div class="page-width contact-card reveal"><div><p class="eyebrow"><i></i> Hablemos de tu operación</p><h2>¿Comercio o<br><em>restaurante?</em></h2><p>Cuéntanos qué vendes y cómo trabajas. Te ayudamos a identificar cuál de los dos puntos de venta se ajusta mejor a tu operación.</p></div><div class="contact-actions"><a class="button button-primary" href="mailto:hola@ozzvon.com?subject=Consulta%20sobre%20Ozzvon">Escribir a Ozzvon <span>↗</span></a><small>Respuesta comercial · hola@ozzvon.com</small></div></div></section>
-</main>
-<footer class="site-footer page-width"><a class="brand" href="#inicio"><img src="./ozzvon-logo.svg" alt="" aria-hidden="true"><span>ozzvon<span class="dot">.</span></span></a><span>Punto de venta para la operación de todos los días.</span><a href="#inicio">Volver arriba ↑</a><small>© 2026 Ozzvon</small></footer>
-<script src="./main.js" defer></script>
-</body></html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#08070b">
+    <meta
+      name="description"
+      content="Ozzvon POS y OZZVAN POR: puntos de venta para comercios y restaurantes. Ventas, inventario, compras, clientes, menús, pedidos y reportes."
+    >
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Ozzvon — Punto de venta para tu operación">
+    <meta
+      property="og:description"
+      content="Dos puntos de venta para tareas reales de comercios y restaurantes."
+    >
+    <link rel="canonical" href="./">
+    <link rel="icon" href="./ozzvon-logo.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="./styles.css">
+    <title>Ozzvon — Punto de venta para comercios y restaurantes</title>
+  </head>
+  <body>
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+    <header class="site-header" id="inicio">
+      <a class="brand" href="#inicio" aria-label="Ozzvon, inicio">
+        <img src="./ozzvon-logo.svg" alt="" aria-hidden="true">
+        <span>ozzvon<span class="dot">.</span></span>
+      </a>
+      <nav class="desktop-nav" id="site-nav" aria-label="Navegación principal">
+        <a href="#productos">Productos</a>
+        <a href="#comercio">Ozzvon POS</a>
+        <a href="#restaurantes">OZZVAN POR</a>
+        <a href="#seguridad">Seguridad</a>
+      </nav>
+      <a class="button button-ghost header-cta" href="#contacto">
+        Hablar con Ozzvon <span>↗</span>
+      </a>
+      <button
+        class="menu-toggle"
+        type="button"
+        aria-label="Abrir menú"
+        aria-controls="site-nav"
+        aria-expanded="false"
+      >
+        <span></span>
+        <span></span>
+      </button>
+    </header>
+    <main>
+      <section class="hero page-width">
+        <div class="hero-copy reveal">
+          <p class="eyebrow"><i></i> Software para la operación real</p>
+          <h1>Ordena tu operación.<br><em>Vende con claridad.</em></h1>
+          <p class="hero-text">
+            Dos puntos de venta Ozzvon para resolver tareas concretas: administra
+            productos y ventas en tu comercio, o coordina pedidos y menús en tu
+            restaurante.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#productos">
+              Ver los productos <span>↓</span>
+            </a>
+            <a class="text-link" href="#contacto">
+              Cuéntanos de tu negocio <span>↗</span>
+            </a>
+          </div>
+          <div class="hero-note">
+            <span>✓</span> Sin promesas inventadas · funciones documentadas en tus
+            aplicaciones
+          </div>
+        </div>
+        <div class="hero-product reveal delay-1">
+          <div class="product-tabs" role="tablist">
+            <button
+              class="product-tab active"
+              data-product="pos"
+              role="tab"
+              aria-selected="true"
+            >
+              OZZVON POS
+            </button>
+            <button
+              class="product-tab"
+              data-product="por"
+              role="tab"
+              aria-selected="false"
+            >
+              OZZVAN POR
+            </button>
+          </div>
+          <div class="product-frame">
+            <div class="frame-bar">
+              <span class="window-dots">
+                <i></i>
+                <i></i>
+                <i></i>
+              </span>
+              <span class="frame-title">Captura real · aplicación original</span>
+              <span class="live-pill"><i></i> Producto</span>
+            </div>
+            <figure class="product-shot active" data-shot="pos">
+              <img
+                src="./real-assets/ozzvon-pos-dashboard.png"
+                alt="Pantalla real del inicio de OZZVON POS con ventas del día, efectivo, transferencia y tarjeta, por cobrar y ventas de la semana"
+              >
+              <figcaption>Inicio · resumen del día</figcaption>
+            </figure>
+            <figure class="product-shot" data-shot="por">
+              <img
+                src="./real-assets/ozzvan-por-nuevo-pedido.png"
+                alt="Pantalla real de nuevo pedido de OZZVAN POR con mesa, para llevar, domicilio y selección de mesas"
+              >
+              <figcaption>Nuevo pedido · mesa, para llevar y domicilio</figcaption>
+            </figure>
+          </div>
+          <p class="real-note">
+            <span>●</span> Pantallas reales extraídas de tus softwares · sin mockups
+          </p>
+        </div>
+      </section>
+      <section class="trust-strip page-width reveal">
+        <span>Hecho para tareas que sí pasan todos los días</span>
+        <div>
+          <b>Ventas</b>
+          <b>Inventario</b>
+          <b>Pedidos</b>
+          <b>Reportes</b>
+        </div>
+      </section>
+      <section class="intro page-width" id="productos">
+        <div class="section-kicker reveal">01 — Dos productos, dos flujos</div>
+        <div class="intro-grid">
+          <h2 class="reveal">Elige la operación<br><em>que se parece a la tuya.</em></h2>
+          <p class="reveal delay-1">
+            Ozzvon POS y OZZVAN POR no son la misma pantalla con otro nombre.
+            Cada aplicación está organizada alrededor de las tareas que necesita
+            un comercio o un restaurante.
+          </p>
+        </div>
+        <div class="product-cards">
+          <article class="product-card reveal">
+            <span class="product-no">01 / COMERCIO</span>
+            <img
+              src="./real-assets/ozzvon-pos-inventory.png"
+              alt="Pantalla real de inventario de OZZVON POS"
+              loading="lazy"
+            >
+            <div>
+              <h3>OZZVON POS</h3>
+              <p>
+                Para registrar ventas, llevar inventario, gestionar compras,
+                clientes, créditos y reportes.
+              </p>
+              <a href="#comercio">Ver funciones <span>↗</span></a>
+            </div>
+          </article>
+          <article class="product-card product-card-purple reveal delay-1">
+            <span class="product-no">02 / RESTAURANTES</span>
+            <img
+              src="./real-assets/ozzvan-por-nuevo-pedido.png"
+              alt="Pantalla real de nuevo pedido de OZZVAN POR"
+              loading="lazy"
+            >
+            <div>
+              <h3>OZZVAN POR</h3>
+              <p>
+                Para trabajar con menús, categorías, productos, mesas, domicilio,
+                para llevar y comandas.
+              </p>
+              <a href="#restaurantes">Ver funciones <span>↗</span></a>
+            </div>
+          </article>
+        </div>
+      </section>
+      <section class="product-section page-width" id="comercio">
+        <div class="section-kicker reveal">02 — Comercio</div>
+        <div class="product-detail-grid">
+          <div class="detail-copy reveal">
+            <span class="number-tag">01</span>
+            <h2>OZZVON<br><em>POS</em></h2>
+            <p class="lead">
+              Un punto de venta para administrar la operación comercial desde una
+              sola aplicación.
+            </p>
+            <div class="feature-list">
+              <div>
+                <b>Ventas</b>
+                <p>
+                  Busca, agrega y cobra productos. La aplicación contempla
+                  efectivo, transferencia, tarjeta, crédito y solicitud de
+                  factura desde una venta.
+                </p>
+              </div>
+              <div>
+                <b>Inventario y compras</b>
+                <p>
+                  Administra catálogo, códigos y existencias; registra
+                  proveedores y entradas de mercancía.
+                </p>
+              </div>
+              <div>
+                <b>Clientes y créditos</b>
+                <p>Consulta clientes, saldos, abonos y operaciones pendientes.</p>
+              </div>
+              <div>
+                <b>Reportes y caja</b>
+                <p>
+                  Revisa ventas y ganancia bruta; abre caja, registra movimientos
+                  y realiza el corte.
+                </p>
+              </div>
+            </div>
+            <a class="text-link" href="#contacto">
+              Preguntar por OZZVON POS <span>↗</span>
+            </a>
+          </div>
+          <div class="real-screen reveal delay-1">
+            <div class="screen-label">
+              <span><i></i> OZZVON POS · CAPTURA REAL</span>
+              <span>Inventario</span>
+            </div>
+            <img
+              src="./real-assets/ozzvon-pos-inventory.png"
+              alt="Captura real del inventario de OZZVON POS"
+              loading="lazy"
+            >
+            <p>
+              La captura conserva la navegación y los estados reales de la
+              aplicación: Inicio, Ventas, Inventario, Compras, Clientes y
+              créditos, Reportes, Corte de caja, Usuarios y Ajustes.
+            </p>
+          </div>
+        </div>
+      </section>
+      <section class="restaurant-section" id="restaurantes">
+        <div class="page-width">
+          <div class="section-kicker reveal">03 — Restaurantes</div>
+          <div class="product-detail-grid reverse">
+            <div class="real-screen restaurant-screen reveal">
+              <div class="screen-label">
+                <span><i></i> OZZVAN POR · CAPTURA REAL</span>
+                <span>Nuevo pedido</span>
+              </div>
+              <img
+                src="./real-assets/ozzvan-por-nuevo-pedido.png"
+                alt="Captura real de nuevo pedido de OZZVAN POR"
+                loading="lazy"
+              >
+              <p>
+                La aplicación muestra su flujo real de pedido con Mesa, Para
+                llevar, Domicilio, selección de mesas, nombre del cliente, notas
+                y total.
+              </p>
+            </div>
+            <div class="detail-copy reveal delay-1">
+              <span class="number-tag coral">02</span>
+              <h2>OZZVAN<br><em>POR</em></h2>
+              <p class="lead">
+                Punto de venta para restaurantes con menú organizado y
+                seguimiento del pedido hasta su conclusión.
+              </p>
+              <div class="feature-list">
+                <div>
+                  <b>Pedidos por servicio</b>
+                  <p>
+                    Trabaja con Mesa, Domicilio y Para llevar; agrega cliente,
+                    dirección, teléfono y notas cuando corresponda.
+                  </p>
+                </div>
+                <div>
+                  <b>Menús y productos</b>
+                  <p>
+                    Crea menús, categorías y productos con tamaños y precios, y
+                    cambia entre menús guardados.
+                  </p>
+                </div>
+                <div>
+                  <b>Estados de pedido</b>
+                  <p>
+                    Consulta pedidos pendientes, en preparación o envío,
+                    concluidos y cancelados.
+                  </p>
+                </div>
+                <div>
+                  <b>Comandas y venta</b>
+                  <p>
+                    Personaliza las variantes de cocina o venta para cada
+                    servicio y genera la comanda sin precios o el comprobante.
+                  </p>
+                </div>
+              </div>
+              <a class="text-link" href="#contacto">
+                Preguntar por OZZVAN POR <span>↗</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="workflow page-width" id="seguridad">
+        <div class="section-kicker reveal">04 — Lo que sí está respaldado</div>
+        <div class="workflow-head">
+          <h2 class="reveal">
+            Más que una pantalla:<br><em>una operación entendible.</em>
+          </h2>
+          <p class="reveal delay-1">
+            La información de esta web sale de tus README, HTML, JavaScript y
+            backends. No agregamos módulos que no estén en tus aplicaciones.
+          </p>
+        </div>
+        <div class="workflow-grid">
+          <article class="reveal">
+            <span>01</span>
+            <b>Datos locales en POR</b>
+            <p>
+              OZZVAN POR usa SQLite local; su base se crea automáticamente y
+              comparte menú y pedidos entre las ventanas conectadas al mismo
+              servidor.
+            </p>
+          </article>
+          <article class="reveal delay-1">
+            <span>02</span>
+            <b>API para POS</b>
+            <p>
+              OZZVON POS trabaja mediante API y contempla conexión a base remota,
+              clientes autenticados y sincronización de cambios en tiempo real.
+            </p>
+          </article>
+          <article class="reveal delay-2">
+            <span>03</span>
+            <b>Protecciones documentadas</b>
+            <p>
+              El paquete describe sesión, permisos por rol, cabeceras de
+              seguridad, CORS configurado y recomendaciones para backend remoto
+              con HTTPS.
+            </p>
+          </article>
+        </div>
+      </section>
+      <section class="faq page-width">
+        <div class="section-kicker reveal">05 — Preguntas frecuentes</div>
+        <div class="faq-list reveal delay-1">
+          <details open>
+            <summary>¿Cuál es para mi negocio?<span>+</span></summary>
+            <p>
+              OZZVON POS está orientado a comercios con ventas, inventario,
+              compras, clientes y caja. OZZVAN POR está orientado a restaurantes
+              con menú, mesas, domicilio, pedidos para llevar y comandas.
+            </p>
+          </details>
+          <details>
+            <summary>¿Puedo usarlo en Windows?<span>+</span></summary>
+            <p>
+              Los dos proyectos incluyen lanzadores y configuración para
+              aplicación de escritorio en Windows. OZZVON POS documenta la
+              construcción de un ejecutable con PyInstaller y OZZVAN POR incluye
+              su propio archivo de construcción.
+            </p>
+          </details>
+          <details>
+            <summary>¿Los datos se guardan en la aplicación?<span>+</span></summary>
+            <p>
+              Depende del producto y la configuración. OZZVAN POR usa SQLite
+              local. OZZVON POS está preparado para trabajar con una API y su
+              documentación contempla una base remota; no se deben colocar
+              credenciales de base de datos en el frontend.
+            </p>
+          </details>
+          <details>
+            <summary>¿Las pantallas de esta web son reales?<span>+</span></summary>
+            <p>
+              Sí. Las imágenes mostradas fueron renderizadas desde los HTML, CSS
+              y JavaScript incluidos en tu archivo WEB.rar. Las etiquetas indican
+              qué aplicación y vista corresponde a cada captura.
+            </p>
+          </details>
+        </div>
+      </section>
+      <section class="contact-section" id="contacto">
+        <div class="page-width contact-card reveal">
+          <div>
+            <p class="eyebrow"><i></i> Hablemos de tu operación</p>
+            <h2>¿Comercio o<br><em>restaurante?</em></h2>
+            <p>
+              Cuéntanos qué vendes y cómo trabajas. Te ayudamos a identificar
+              cuál de los dos puntos de venta se ajusta mejor a tu operación.
+            </p>
+          </div>
+          <div class="contact-actions">
+            <button
+              class="button button-primary"
+              type="button"
+              id="open-contact-form"
+            >
+              Obtén tu software personalizado <span>↗</span>
+            </button>
+            <small>Respuesta comercial · contacto@ozzvon.com</small>
+          </div>
+        </div>
+      </section>
+      <dialog class="contact-dialog" id="contact-dialog" aria-labelledby="contact-dialog-title">
+        <div class="contact-dialog-content">
+          <div class="contact-dialog-header">
+            <div>
+              <p class="eyebrow"><i></i> Cuéntanos de tu negocio</p>
+              <h2 id="contact-dialog-title">Obtén tu software<br><em>personalizado.</em></h2>
+            </div>
+            <button
+              class="dialog-close"
+              type="button"
+              aria-label="Cerrar formulario"
+              data-close-dialog
+            >
+              ×
+            </button>
+          </div>
+          <p class="contact-dialog-intro">
+            Déjanos tus datos y nos pondremos en contacto contigo para conocer
+            lo que necesitas.
+          </p>
+          <form
+            class="contact-form"
+            id="contact-form"
+            action="https://formsubmit.co/ajax/contacto@ozzvon.com"
+            method="POST"
+          >
+            <input type="hidden" name="_subject" value="Nueva consulta desde Ozzvon">
+            <input type="hidden" name="_template" value="table">
+            <div class="form-honeypot" aria-hidden="true">
+              <label for="contact-website">Deja este campo vacío</label>
+              <input
+                id="contact-website"
+                type="text"
+                name="_honey"
+                tabindex="-1"
+                autocomplete="off"
+              >
+            </div>
+            <label>
+              Nombre
+              <input
+                type="text"
+                name="Nombre"
+                autocomplete="name"
+                required
+                maxlength="100"
+              >
+            </label>
+            <div class="form-row">
+              <label>
+                Correo electrónico
+                <input
+                  type="email"
+                  name="email"
+                  autocomplete="email"
+                  required
+                  maxlength="254"
+                >
+              </label>
+              <label>
+                Teléfono <span>(opcional)</span>
+                <input
+                  type="tel"
+                  name="Teléfono"
+                  autocomplete="tel"
+                  maxlength="30"
+                >
+              </label>
+            </div>
+            <div class="form-row">
+              <label>
+                Tipo de negocio
+                <select name="Tipo de negocio" required>
+                  <option value="" selected disabled>Selecciona una opción</option>
+                  <option value="Comercio">Comercio</option>
+                  <option value="Restaurante">Restaurante</option>
+                  <option value="Otro">Otro</option>
+                </select>
+              </label>
+              <label>
+                ¿Qué te interesa?
+                <select name="Producto" required>
+                  <option value="" selected disabled>Selecciona una opción</option>
+                  <option value="OZZVON POS">OZZVON POS</option>
+                  <option value="OZZVAN POR">OZZVAN POR</option>
+                  <option value="Asesoría para elegir">Asesoría para elegir</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              Cuéntanos qué necesitas
+              <textarea
+                name="Mensaje"
+                rows="4"
+                required
+                maxlength="2000"
+              ></textarea>
+            </label>
+            <p class="form-privacy">
+              Al enviar, tus datos se compartirán con FormSubmit para entregarnos
+              tu consulta por correo.
+            </p>
+            <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+            <button class="button button-primary form-submit" type="submit">
+              Enviar consulta <span>↗</span>
+            </button>
+          </form>
+        </div>
+      </dialog>
+    </main>
+    <footer class="site-footer page-width">
+      <a class="brand" href="#inicio">
+        <img src="./ozzvon-logo.svg" alt="" aria-hidden="true">
+        <span>ozzvon<span class="dot">.</span></span>
+      </a>
+      <span>Punto de venta para la operación de todos los días.</span>
+      <a href="#inicio">Volver arriba ↑</a>
+      <small>© 2026 Ozzvon</small>
+    </footer>
+    <script src="./main.js" defer></script>
+  </body>
+</html>
