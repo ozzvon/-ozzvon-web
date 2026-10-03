@@ -147,8 +147,9 @@
           <div>
             <h2>¿Mostrador o restaurante?<br><em>Haz una prueba ahora.</em></h2>
             <p>
-              Entra, arma una venta o pedido y pruébalo tú mismo. Una muestra
-              interactiva inspirada en el flujo de cada software.
+              Explora ventas, inventario, clientes, reportes y caja. En el
+              restaurante arma pedidos por mesa, para llevar o a domicilio, y
+              sigue su avance. También puedes cambiar el tema y los colores.
             </p>
           </div>
           <button
@@ -272,7 +273,37 @@
                   </div>
                   <div class="demo-inventory-table" id="demo-inventory-table"></div>
                 </section>
+                <section class="demo-data-view" id="demo-data-view" hidden></section>
                 <section class="demo-orders-view" id="demo-orders-view" hidden></section>
+                <section class="demo-settings-view" id="demo-settings-view" hidden>
+                  <div class="demo-settings-heading">
+                    <div><span class="demo-overline">PERSONALIZA LA VISTA</span><h4>Apariencia y preferencias</h4></div>
+                    <span>Solo para esta demostración</span>
+                  </div>
+                  <div class="demo-settings-grid">
+                    <article class="demo-setting-card">
+                      <span class="demo-overline">PREFERENCIAS</span>
+                      <h5>Tema de la aplicación</h5>
+                      <p>Prueba cómo se ve el punto de venta con diferentes condiciones de luz.</p>
+                      <div class="demo-setting-options" id="demo-theme-options" role="radiogroup" aria-label="Tema de la aplicación"></div>
+                    </article>
+                    <article class="demo-setting-card" id="demo-accent-setting">
+                      <span class="demo-overline">IDENTIDAD VISUAL</span>
+                      <h5>Color de la aplicación</h5>
+                      <p>Cambia el color principal de los botones y elementos destacados.</p>
+                      <div class="demo-setting-options demo-accent-options" id="demo-accent-options" role="radiogroup" aria-label="Color de la aplicación"></div>
+                    </article>
+                    <article class="demo-setting-card demo-tables-setting" id="demo-tables-setting">
+                      <span class="demo-overline">OPERACIÓN</span>
+                      <h5>Mesas disponibles</h5>
+                      <p>Configura cuántas mesas aparecen al crear un pedido.</p>
+                      <label class="demo-setting-number">Mesas en esta muestra
+                        <input id="demo-table-count" type="number" min="1" max="24" value="12">
+                      </label>
+                    </article>
+                  </div>
+                  <p class="demo-settings-note">Estos cambios son temporales: no se guardan ni modifican tus programas.</p>
+                </section>
                 <div class="demo-size-modal" id="demo-size-modal" hidden>
                   <div class="demo-size-dialog" role="dialog" aria-modal="true" aria-labelledby="demo-size-title">
                     <h3 id="demo-size-title">Selecciona tamaño</h3>
@@ -287,7 +318,7 @@
           </div>
         </div>
         <p class="demo-footnote reveal">
-          <span>ⓘ</span> Productos y precios de muestra. Ventas, inventario y pedidos solo simulan el flujo: no conectan con tus sistemas, no cobran y se borran al salir o actualizar.
+          <span>ⓘ</span> Todo es de muestra: las ventas, abonos, reportes, cortes, pedidos y ajustes visuales no se guardan ni se conectan a tus sistemas; los cambios se reinician al actualizar.
         </p>
       </section>
       <section class="product-section page-width" id="comercio">

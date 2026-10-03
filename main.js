@@ -39,6 +39,9 @@ const demoToast=document.querySelector('#demo-toast');
 const demoState={
   product:'commerce',
   view:'sale',
+  themes:{commerce:'system',restaurant:'auto'},
+  accent:'ember',
+  tableCount:12,
   category:'pz',
   search:'',
   cart:[],
@@ -48,6 +51,14 @@ const demoState={
   phone:'',
   address:'',
   notes:'',
+  sales:[],
+  customers:[
+    {id:'ana',name:'Ana Torres',phone:'55 1234 5678',balance:250},
+    {id:'carlos',name:'Carlos Ruiz',phone:'55 2345 6789',balance:0},
+    {id:'laura',name:'Laura Méndez',phone:'55 3456 7890',balance:680}
+  ],
+  cashCounted:'',
+  cashClosed:false,
   discount:0,
   payment:'Efectivo',
   received:'',
@@ -58,9 +69,18 @@ const demoState={
 };
 let demoSizeTrigger=null;
 const demoDescriptions={
-  commerce:{brand:'OZZVON POS',kind:'COMERCIO',icon:'▰',nav:[['Ventas','sale'],['Inventario','inventory'],['Compras',null],['Clientes y créditos',null],['Reportes',null],['Corte de caja',null],['Usuarios',null],['Ajustes',null]]},
-  restaurant:{brand:'Mi Pizzería',kind:'OZZVAN POS',icon:'🍕',nav:[['Nuevo pedido','sale'],['Pedidos','orders'],['Ventas',null],['Menú',null],['Configuración',null]]}
+  commerce:{brand:'OZZVON POS',kind:'COMERCIO',icon:'▰',nav:[['Ventas','sale'],['Inventario','inventory'],['Clientes y créditos','customers'],['Reportes','reports'],['Corte de caja','cash'],['Ajustes','settings']]},
+  restaurant:{brand:'Mi Pizzería',kind:'OZZVAN POS',icon:'🍕',nav:[['Nuevo pedido','sale'],['Pedidos','orders'],['Menú','menu'],['Configuración','settings']]}
 };
+const demoThemeOptions={
+  commerce:[['system','Sistema'],['light','Claro'],['dark','Oscuro'],['mint','Menta'],['forest','Bosque'],['contrast','Alto contraste']],
+  restaurant:[['auto','Auto'],['light','Claro'],['dark','Oscuro']]
+};
+const demoAccentOptions=[
+  ['ember','Mandarina','#e4462a'],['esmeralda','Esmeralda','#0f9d6b'],
+  ['oceano','Océano','#2563eb'],['violeta','Violeta','#7c3aed'],
+  ['oro','Oro','#b7791f'],['rosa','Rosa','#db2777'],['grafito','Grafito','#3f3f46']
+];
 function demoNotice(message){
   demoToast.textContent=message;
 }
@@ -93,7 +113,7 @@ function demoTotal(){
 function renderDemoNav(){
   const restaurant=demoState.product==='restaurant';
   const config=demoDescriptions[demoState.product];
-  const icons=restaurant?['＋','▤','▥','☰','⚙']:['⌂','▣','▤','↗','♙','▥','◷','♙','⚙'];
+  const icons=restaurant?['＋','▤','☰','⚙']:['⌂','▣','♙','▥','◷','⚙'];
   document.querySelector('#demo-app-name').textContent=restaurant?'OZZVAN POS · RESTAURANTE':'OZZVON POS · COMERCIO';
   document.querySelector('#demo-brand-icon').textContent=config.icon;
   document.querySelector('#demo-brand-name').textContent=config.brand;
@@ -208,7 +228,7 @@ function renderDemoOrderOptions(){
     tableLabel.textContent='Selecciona mesa';
     const tables=document.createElement('div');
     tables.className='demo-tables';
-    for(let table=1;table<=12;table++){
+    for(let table=1;table<=demoState.tableCount;table++){
       const button=demoButton(String(table),'demo-table',{demoTable:String(table)});
       if(table===demoState.table)button.classList.add('active');
       button.setAttribute('aria-pressed',String(table===demoState.table));
@@ -414,31 +434,218 @@ function renderDemoInventory(){
     return row;
   }));
 }
+function renderDemoDataView(){
+  const section=document.querySelector('#demo-data-view');
+  section.replaceChildren();
+  const heading=document.createElement('div');
+  heading.className='demo-inventory-heading';
+  const title=document.createElement('div');
+  const overline=document.createElement('span');
+  overline.className='demo-overline';
+  overline.textContent='MODO DE MUESTRA';
+  const titleText=document.createElement('h4');
+  title.append(overline);
+  const subheading=document.createElement('span');
+  subheading.textContent='Datos temporales de esta visita';
+  title.append(titleText);
+  heading.append(title,subheading);
+  section.append(heading);
+  const cards=document.createElement('div');
+  cards.className='demo-data-cards';
+  if(demoState.view==='customers'){
+    titleText.textContent='Clientes y créditos';
+    const description=document.createElement('p');
+    description.className='demo-data-intro';
+    description.textContent='Consulta saldos y simula un abono. Los cambios solo viven en esta sesión.';
+    section.append(description);
+    demoState.customers.forEach(customer=>{
+      const card=document.createElement('article');
+      card.className='demo-data-card demo-customer-card';
+      const identity=document.createElement('div');
+      const name=document.createElement('b');
+      name.textContent=customer.name;
+      const phone=document.createElement('small');
+      phone.textContent=customer.phone;
+      identity.append(name,phone);
+      const balance=document.createElement('strong');
+      balance.textContent=demoMoney.format(customer.balance);
+      const label=document.createElement('small');
+      label.textContent='Saldo pendiente';
+      const action=demoButton(customer.balance?'Simular abono de $100':'Sin saldo pendiente','demo-credit-payment',{demoCustomer:customer.id});
+      action.disabled=!customer.balance;
+      card.append(identity,document.createElement('span'));
+      const details=document.createElement('div');
+      details.className='demo-credit-balance';
+      details.append(label,balance);
+      card.replaceChildren(identity,details,action);
+      cards.append(card);
+    });
+    section.append(cards);
+    return;
+  }
+  if(demoState.view==='reports'){
+    titleText.textContent='Resumen de ventas';
+    const total=demoState.sales.reduce((sum,sale)=>sum+sale.total,0);
+    const cash=demoState.sales.filter(sale=>sale.payment==='Efectivo').reduce((sum,sale)=>sum+sale.total,0);
+    const cardPayments=demoState.sales.filter(sale=>sale.payment==='Tarjeta').reduce((sum,sale)=>sum+sale.total,0);
+    const transfers=demoState.sales.filter(sale=>sale.payment==='Transferencia').reduce((sum,sale)=>sum+sale.total,0);
+    const metrics=[['Ventas de muestra',demoState.sales.length],['Ingresos simulados',demoMoney.format(total)],['Efectivo',demoMoney.format(cash)],['Tarjeta',demoMoney.format(cardPayments)],['Transferencia',demoMoney.format(transfers)]];
+    metrics.forEach(([label,value])=>{
+      const card=document.createElement('article');
+      card.className='demo-data-card demo-metric-card';
+      const metricLabel=document.createElement('small');
+      metricLabel.textContent=label;
+      const metricValue=document.createElement('strong');
+      metricValue.textContent=String(value);
+      card.append(metricLabel,metricValue);
+      cards.append(card);
+    });
+    const recent=document.createElement('div');
+    recent.className='demo-recent-sales';
+    const recentTitle=document.createElement('h5');
+    recentTitle.textContent='Actividad reciente';
+    recent.append(recentTitle);
+    if(!demoState.sales.length){
+      const empty=document.createElement('p');
+      empty.className='demo-empty-result';
+      empty.textContent='Completa una venta de muestra para ver aquí la actividad.';
+      recent.append(empty);
+    }else{
+      demoState.sales.slice(0,5).forEach(sale=>{
+        const row=document.createElement('div');
+        row.className='demo-report-row';
+        const description=document.createElement('span');
+        description.textContent=`Venta #${String(sale.id).padStart(3,'0')} · ${sale.items} artículo(s) · ${sale.payment}`;
+        const amount=document.createElement('b');
+        amount.textContent=demoMoney.format(sale.total);
+        row.append(description,amount);
+        recent.append(row);
+      });
+    }
+    section.append(cards,recent);
+    return;
+  }
+  if(demoState.view==='cash'){
+    titleText.textContent=demoState.cashClosed?'Corte de caja simulado':'Corte de caja';
+    const opening=1000;
+    const cashSales=demoState.sales.filter(sale=>sale.payment==='Efectivo').reduce((sum,sale)=>sum+sale.total,0);
+    const expected=opening+cashSales;
+    const counted=Number(demoState.cashCounted)||0;
+    const summary=document.createElement('div');
+    summary.className='demo-cash-summary';
+    [['Fondo de apertura',demoMoney.format(opening)],['Ventas en efectivo',demoMoney.format(cashSales)],['Efectivo esperado',demoMoney.format(expected)]].forEach(([label,value])=>{
+      const row=document.createElement('div');
+      row.className='demo-report-row';
+      const name=document.createElement('span');
+      name.textContent=label;
+      const amount=document.createElement('b');
+      amount.textContent=value;
+      row.append(name,amount);
+      summary.append(row);
+    });
+    const form=document.createElement('label');
+    form.className='demo-cash-count';
+    form.textContent='Efectivo contado';
+    const input=document.createElement('input');
+    input.type='number';
+    input.min='0';
+    input.step='0.01';
+    input.placeholder=demoMoney.format(expected);
+    input.value=demoState.cashCounted;
+    input.dataset.demoCashCount='true';
+    input.setAttribute('aria-label','Efectivo contado en el corte de muestra');
+    form.append(input);
+    const difference=document.createElement('p');
+    difference.className='demo-cash-difference';
+    difference.textContent=`Diferencia: ${demoMoney.format(demoState.cashCounted===''?0:counted-expected)}`;
+    const close=demoButton(demoState.cashClosed?'Corte de muestra realizado':'Simular corte de caja','demo-cash-close',{demoCashClose:'true'});
+    close.disabled=demoState.cashClosed;
+    section.append(summary,form,difference,close);
+    return;
+  }
+  if(demoState.view==='menu'){
+    titleText.textContent='Menú de muestra';
+    const products=demoData.restaurant;
+    products.forEach(product=>{
+      const card=document.createElement('article');
+      card.className='demo-data-card demo-menu-card';
+      const icon=document.createElement('span');
+      icon.textContent=product.icon;
+      icon.setAttribute('aria-hidden','true');
+      const name=document.createElement('b');
+      name.textContent=product.name;
+      const price=document.createElement('small');
+      price.textContent=`Desde ${demoMoney.format(Math.min(...product.sizes.map(size=>size[1])))}`;
+      card.append(icon,name,price);
+      cards.append(card);
+    });
+    section.append(cards);
+  }
+}
+function renderDemoSettings(){
+  const restaurant=demoState.product==='restaurant';
+  const themeContainer=document.querySelector('#demo-theme-options');
+  const selectedTheme=demoState.themes[demoState.product];
+  themeContainer.replaceChildren(...demoThemeOptions[demoState.product].map(([id,label])=>{
+    const button=demoButton(label,'demo-setting-option',{demoThemeOption:id});
+    button.setAttribute('role','radio');
+    button.setAttribute('aria-checked',String(id===selectedTheme));
+    if(id===selectedTheme)button.classList.add('selected');
+    return button;
+  }));
+  const accentContainer=document.querySelector('#demo-accent-options');
+  accentContainer.replaceChildren(...demoAccentOptions.map(([id,label,color])=>{
+    const button=demoButton(label,'demo-setting-option',{demoAccent:id});
+    button.setAttribute('role','radio');
+    button.setAttribute('aria-checked',String(id===demoState.accent));
+    if(id===demoState.accent)button.classList.add('selected');
+    const swatch=document.createElement('i');
+    swatch.style.setProperty('--demo-swatch-color',color);
+    button.prepend(swatch);
+    return button;
+  }));
+  document.querySelector('#demo-accent-setting').hidden=!restaurant;
+  document.querySelector('#demo-tables-setting').hidden=!restaurant;
+  document.querySelector('#demo-table-count').value=demoState.tableCount;
+}
 function renderDemo(){
   const restaurant=demoState.product==='restaurant';
-  const config=demoDescriptions[demoState.product];
   const quantity=demoState.cart.reduce((sum,item)=>sum+item.quantity,0);
   const progress=demoState.completed?3:Math.min(quantity,2);
-  document.querySelector('#demo-app').dataset.demoProduct=demoState.product;
+  const screenLabels=restaurant
+    ?{sale:'NUEVO PEDIDO',orders:'PEDIDOS',menu:'MENÚ',settings:'AJUSTES'}
+    :{sale:'VENTAS',inventory:'INVENTARIO',customers:'CLIENTES',reports:'REPORTES',cash:'CORTE DE CAJA',settings:'AJUSTES'};
+  const screenTitles=restaurant
+    ?{sale:'Nuevo pedido',orders:'Pedidos de hoy',menu:'Menú de muestra',settings:'Apariencia y preferencias'}
+    :{sale:'Ventas',inventory:'Inventario',customers:'Clientes y créditos',reports:'Resumen de ventas',cash:'Corte de caja',settings:'Apariencia y preferencias'};
+  const app=document.querySelector('#demo-app');
+  app.dataset.demoProduct=demoState.product;
+  const theme=demoState.themes[demoState.product];
+  const followsSystem=theme==='system'||theme==='auto';
+  app.dataset.demoTheme=followsSystem
+    ?window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'
+    :theme;
+  app.dataset.demoAccent=demoState.accent;
   demoTabs.forEach(tab=>{
     const active=tab.dataset.demoProduct===demoState.product;
     tab.classList.toggle('active',active);
     tab.setAttribute('aria-selected',String(active));
   });
   renderDemoNav();
-  document.querySelector('#demo-screen-label').textContent=restaurant?'NUEVO PEDIDO':'VENTAS';
-  document.querySelector('#demo-screen-title').textContent=restaurant
-    ?demoState.view==='orders'?'Pedidos de hoy':'Nuevo pedido'
-    :demoState.view==='inventory'?'Inventario':'Ventas';
+  document.querySelector('#demo-screen-label').textContent=screenLabels[demoState.view];
+  document.querySelector('#demo-screen-title').textContent=screenTitles[demoState.view];
   document.querySelector('#demo-register-label').textContent=restaurant?'En línea · modo muestra':'Caja abierta';
   document.querySelector('#demo-brand-kind').textContent=restaurant?'OZZVAN POS':'COMERCIO';
   document.querySelector('#demo-catalog-label').textContent=restaurant?'MENÚ':'BUSCAR PRODUCTOS';
   document.querySelector('#demo-catalog-title').textContent=restaurant?'Elige productos':'Nueva venta';
   document.querySelector('#demo-commerce-tools').hidden=restaurant;
   document.querySelector('#demo-restaurant-tools').hidden=!restaurant;
-  document.querySelector('#demo-sale-layout').hidden=(restaurant&&demoState.view==='orders')||(!restaurant&&demoState.view==='inventory');
+  document.querySelector('#demo-sale-layout').hidden=demoState.view!=='sale';
   document.querySelector('#demo-inventory-view').hidden=restaurant||demoState.view!=='inventory';
   document.querySelector('#demo-orders-view').hidden=!restaurant||demoState.view!=='orders';
+  document.querySelector('#demo-data-view').hidden=demoState.view==='sale'||demoState.view==='inventory'||demoState.view==='orders'||demoState.view==='settings';
+  document.querySelector('#demo-settings-view').hidden=demoState.view!=='settings';
+  document.querySelector('.demo-challenge').hidden=demoState.view!=='sale';
   document.querySelector('#demo-progress-bar').style.width=`${progress/3*100}%`;
   document.querySelector('#demo-progress-label').textContent=demoState.completed
     ?'¡Reto completado! Cambia de POS para probar el otro.'
@@ -455,8 +662,10 @@ function renderDemo(){
   renderDemoOrderOptions();
   renderDemoCart();
   renderDemoOrders();
-  document.querySelector('#demo-cart').hidden=(restaurant&&demoState.view==='orders')||(!restaurant&&demoState.view==='inventory');
+  document.querySelector('#demo-cart').hidden=demoState.view!=='sale';
   renderDemoInventory();
+  renderDemoDataView();
+  renderDemoSettings();
 }
 function resetDemoForProduct(product){
   demoState.product=product;
@@ -558,6 +767,12 @@ function handleDemoCheckout(){
     return;
   }
   const total=demoTotal();
+  demoState.sales.unshift({
+    id:demoState.sales.length+1,
+    total,
+    payment:demoState.payment,
+    items:demoState.cart.reduce((sum,item)=>sum+item.quantity,0)
+  });
   demoState.cart.forEach(item=>{
     item.product.stock=Math.max(0,item.product.stock-item.quantity);
   });
@@ -581,6 +796,47 @@ document.querySelector('#demo-side-nav').addEventListener('click',event=>{
   if(!button||button.disabled)return;
   demoState.view=button.dataset.demoNav;
   renderDemo();
+});
+document.querySelector('#demo-settings-view').addEventListener('click',event=>{
+  const theme=event.target.closest('[data-demo-theme-option]');
+  if(theme){
+    demoState.themes[demoState.product]=theme.dataset.demoThemeOption;
+    renderDemo();
+    return;
+  }
+  const accent=event.target.closest('[data-demo-accent]');
+  if(accent){
+    demoState.accent=accent.dataset.demoAccent;
+    renderDemo();
+  }
+});
+document.querySelector('#demo-data-view').addEventListener('click',event=>{
+  const payment=event.target.closest('[data-demo-customer]');
+  if(payment){
+    const customer=demoState.customers.find(item=>item.id===payment.dataset.demoCustomer);
+    if(!customer)return;
+    customer.balance=Math.max(0,customer.balance-100);
+    demoNotice(`Abono de muestra registrado. Nuevo saldo: ${demoMoney.format(customer.balance)}. No se guardó.`);
+    renderDemoDataView();
+    return;
+  }
+  if(event.target.closest('[data-demo-cash-close]')){
+    demoState.cashClosed=true;
+    demoNotice('Corte de caja de muestra realizado. No se guardó ningún dato.');
+    renderDemoDataView();
+  }
+});
+document.querySelector('#demo-data-view').addEventListener('input',event=>{
+  if(!event.target.matches('[data-demo-cash-count]'))return;
+  demoState.cashCounted=event.target.value;
+  const sales=demoState.sales.filter(sale=>sale.payment==='Efectivo').reduce((sum,sale)=>sum+sale.total,0);
+  const expected=1000+sales;
+  const difference=Number(demoState.cashCounted||0)-expected;
+  document.querySelector('.demo-cash-difference').textContent=`Diferencia: ${demoMoney.format(difference)}`;
+});
+document.querySelector('#demo-table-count').addEventListener('input',event=>{
+  const parsed=Number(event.target.value);
+  if(Number.isInteger(parsed)&&parsed>=1&&parsed<=24)demoState.tableCount=parsed;
 });
 document.querySelector('#demo-search').addEventListener('input',event=>{
   demoState.search=event.target.value;
