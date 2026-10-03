@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#08070b">
     <meta
       name="description"
-      content="Ozzvon POS y OZZVAN POR: puntos de venta para comercios y restaurantes. Ventas, inventario, compras, clientes, menús, pedidos y reportes."
+      content="Ozzvon POS y OZZVAN POS Restaurante: puntos de venta para comercios y restaurantes. Ventas, inventario, compras, clientes, menús, pedidos y reportes."
     >
     <meta property="og:type" content="website">
     <meta property="og:title" content="Ozzvon — Punto de venta para tu operación">
@@ -35,8 +35,9 @@
       </a>
       <nav class="desktop-nav" id="site-nav" aria-label="Navegación principal">
         <a href="#productos">Productos</a>
+        <a href="#demo">Demo</a>
         <a href="#comercio">Ozzvon POS</a>
-        <a href="#restaurantes">OZZVAN POR</a>
+        <a href="#restaurantes">POS Restaurante</a>
         <a href="#seguridad">Seguridad</a>
       </nav>
       <a class="button button-ghost header-cta" href="#contacto">
@@ -64,11 +65,11 @@
             restaurante.
           </p>
           <div class="hero-actions">
-            <a class="button button-primary" href="#productos">
-              Ver los productos <span>↓</span>
+            <a class="button button-primary" href="#demo">
+              Prueba los POS ahora <span>↓</span>
             </a>
-            <a class="text-link" href="#contacto">
-              Cuéntanos de tu negocio <span>↗</span>
+            <a class="text-link" href="#productos">
+              Conoce cada sistema <span>↗</span>
             </a>
           </div>
           <div class="hero-note">
@@ -77,52 +78,23 @@
           </div>
         </div>
         <div class="hero-product reveal delay-1">
-          <div class="product-tabs" role="tablist">
-            <button
-              class="product-tab active"
-              data-product="pos"
-              role="tab"
-              aria-selected="true"
-            >
-              OZZVON POS
-            </button>
-            <button
-              class="product-tab"
-              data-product="por"
-              role="tab"
-              aria-selected="false"
-            >
-              OZZVAN POR
-            </button>
-          </div>
-          <div class="product-frame">
-            <div class="frame-bar">
-              <span class="window-dots">
-                <i></i>
-                <i></i>
-                <i></i>
-              </span>
-              <span class="frame-title">Captura real · aplicación original</span>
-              <span class="live-pill"><i></i> Producto</span>
+          <div class="hero-demo-card">
+            <div class="hero-demo-top">
+              <span class="live-pill"><i></i> TU NEGOCIO, EN MARCHA</span>
+              <span class="hero-demo-hint">Elige y prueba ↓</span>
             </div>
-            <figure class="product-shot active" data-shot="pos">
-              <img
-                src="./real-assets/ozzvon-pos-dashboard.png"
-                alt="Pantalla real del inicio de OZZVON POS con ventas del día, efectivo, transferencia y tarjeta, por cobrar y ventas de la semana"
-              >
-              <figcaption>Inicio · resumen del día</figcaption>
-            </figure>
-            <figure class="product-shot" data-shot="por">
-              <img
-                src="./real-assets/ozzvan-por-nuevo-pedido.png"
-                alt="Pantalla real de nuevo pedido de OZZVAN POR con mesa, para llevar, domicilio y selección de mesas"
-              >
-              <figcaption>Nuevo pedido · mesa, para llevar y domicilio</figcaption>
-            </figure>
+            <a class="hero-product-link" href="#demo" data-demo-link="commerce">
+              <span class="hero-product-icon">▦</span>
+              <span><b>OZZVON POS</b><small>Ventas · inventario · caja</small></span>
+              <span class="hero-product-arrow">↗</span>
+            </a>
+            <a class="hero-product-link" href="#demo" data-demo-link="restaurant">
+              <span class="hero-product-icon restaurant-icon">✳</span>
+              <span><b>OZZVAN POS <small class="inline-small">RESTAURANTE</small></b><small>Mesas · menú · pedidos</small></span>
+              <span class="hero-product-arrow">↗</span>
+            </a>
+            <p>Una prueba rápida. Sin registro, sin instalación y sin guardar datos.</p>
           </div>
-          <p class="real-note">
-            <span>●</span> Pantallas reales extraídas de tus softwares · sin mockups
-          </p>
         </div>
       </section>
       <section class="trust-strip page-width reveal">
@@ -139,7 +111,7 @@
         <div class="intro-grid">
           <h2 class="reveal">Elige la operación<br><em>que se parece a la tuya.</em></h2>
           <p class="reveal delay-1">
-            Ozzvon POS y OZZVAN POR no son la misma pantalla con otro nombre.
+            Ozzvon POS y OZZVAN POS Restaurante no son la misma pantalla con otro nombre.
             Cada aplicación está organizada alrededor de las tareas que necesita
             un comercio o un restaurante.
           </p>
@@ -147,11 +119,6 @@
         <div class="product-cards">
           <article class="product-card reveal">
             <span class="product-no">01 / COMERCIO</span>
-            <img
-              src="./real-assets/ozzvon-pos-inventory.png"
-              alt="Pantalla real de inventario de OZZVON POS"
-              loading="lazy"
-            >
             <div>
               <h3>OZZVON POS</h3>
               <p>
@@ -163,13 +130,8 @@
           </article>
           <article class="product-card product-card-purple reveal delay-1">
             <span class="product-no">02 / RESTAURANTES</span>
-            <img
-              src="./real-assets/ozzvan-por-nuevo-pedido.png"
-              alt="Pantalla real de nuevo pedido de OZZVAN POR"
-              loading="lazy"
-            >
             <div>
-              <h3>OZZVAN POR</h3>
+              <h3>OZZVAN POS Restaurante</h3>
               <p>
                 Para trabajar con menús, categorías, productos, mesas, domicilio,
                 para llevar y comandas.
@@ -179,8 +141,157 @@
           </article>
         </div>
       </section>
+      <section class="demo-section page-width" id="demo">
+        <div class="section-kicker reveal">02 — Entra y pruébalo</div>
+        <div class="demo-heading reveal">
+          <div>
+            <h2>¿Mostrador o restaurante?<br><em>Haz una prueba ahora.</em></h2>
+            <p>
+              Entra, arma una venta o pedido y pruébalo tú mismo. Una muestra
+              interactiva inspirada en el flujo de cada software.
+            </p>
+          </div>
+          <button
+            class="info-tip"
+            type="button"
+            aria-label="Información del recorrido"
+            data-tooltip="Demo independiente: todos los productos y precios son de ejemplo; nada se envía ni se guarda."
+          >i</button>
+        </div>
+        <div class="demo-tabs" role="tablist" aria-label="Elegir punto de venta">
+          <button
+            class="demo-tab active"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            data-demo-product="commerce"
+          >OZZVON POS <span>Comercio</span></button>
+          <button
+            class="demo-tab"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            data-demo-product="restaurant"
+          >OZZVAN POS <span>Restaurante</span></button>
+        </div>
+        <div class="demo-window reveal">
+          <div class="demo-titlebar">
+            <span class="window-dots"><i></i><i></i><i></i></span>
+            <span class="demo-app-name" id="demo-app-name">OZZVON POS · COMERCIO</span>
+            <span class="demo-status"><i></i> Vista previa</span>
+          </div>
+          <div class="demo-app" id="demo-app">
+            <div class="demo-system-layout">
+              <aside class="demo-pos-sidebar">
+                <div class="demo-pos-brand">
+                  <span class="demo-brand-icon" id="demo-brand-icon">▰</span>
+                  <span><b id="demo-brand-name">OZZVON POS</b><small id="demo-brand-kind">COMERCIO</small></span>
+                </div>
+                <nav class="demo-side-nav" id="demo-side-nav" aria-label="Navegación de muestra"></nav>
+                <div class="demo-side-user">
+                  <span>O</span>
+                  <div><b>Usuario demo</b><small>Sesión temporal</small></div>
+                </div>
+              </aside>
+              <div class="demo-main">
+                <header class="demo-app-toolbar">
+                  <div>
+                    <span class="demo-overline" id="demo-screen-label">VENTAS</span>
+                    <h3 id="demo-screen-title">Nueva venta</h3>
+                  </div>
+                  <span class="demo-open-register"><i></i><span id="demo-register-label">Caja abierta</span></span>
+                  <div class="demo-challenge">
+                    <span>RETO EXPRÉS · 3 PASOS</span>
+                    <div class="demo-progress"><i id="demo-progress-bar"></i></div>
+                    <small id="demo-progress-label">Agrega 2 productos para empezar</small>
+                  </div>
+                  <button
+                    class="info-tip"
+                    type="button"
+                    aria-label="Información sobre los datos de muestra"
+                    data-tooltip="Productos, precios y pedidos son de ejemplo. La demo no guarda cambios ni se conecta a tus sistemas."
+                  >i</button>
+                </header>
+                <div class="demo-sale-layout" id="demo-sale-layout">
+                  <section class="demo-catalog" aria-labelledby="demo-catalog-title">
+                    <div class="demo-catalog-heading">
+                      <div>
+                        <span class="demo-overline" id="demo-catalog-label">BUSCAR PRODUCTOS</span>
+                        <h4 id="demo-catalog-title">Nueva venta</h4>
+                      </div>
+                      <span class="demo-sample-tag">MODO DEMO</span>
+                    </div>
+                    <div id="demo-commerce-tools">
+                      <label class="demo-search-wrap">
+                        <span aria-hidden="true">⌕</span>
+                        <input id="demo-search" type="search" placeholder="Escanea el código o escribe el nombre del producto…" autocomplete="off">
+                      </label>
+                      <div class="demo-frequent">
+                        <span>Productos frecuentes:</span>
+                        <div id="demo-frequent-products"></div>
+                      </div>
+                    </div>
+                    <div id="demo-restaurant-tools" hidden>
+                      <div class="demo-category-tabs" id="demo-categories" aria-label="Categorías del menú"></div>
+                    </div>
+                    <div class="demo-product-grid" id="demo-product-grid" aria-live="polite"></div>
+                  </section>
+                  <aside class="demo-cart" id="demo-cart" aria-labelledby="demo-cart-title">
+                    <div class="demo-cart-heading">
+                      <div>
+                        <span class="demo-overline" id="demo-cart-context">CLIENTE DE MUESTRA</span>
+                        <h4 id="demo-cart-title">Venta actual</h4>
+                      </div>
+                      <span class="demo-cart-count" id="demo-cart-count">0</span>
+                    </div>
+                    <div class="demo-order-options" id="demo-order-options"></div>
+                    <div class="demo-cart-items" id="demo-cart-items" aria-live="polite"></div>
+                    <div class="demo-cart-empty" id="demo-cart-empty">
+                      <span>＋</span>
+                      <p>La venta está vacía.<br>Busca un producto para empezar.</p>
+                    </div>
+                    <div id="demo-payment-fields" hidden></div>
+                    <div class="demo-taxes" id="demo-taxes" hidden>
+                      <span>Subtotal sin IVA <b id="demo-subtotal">$0.00</b></span>
+                      <span>IVA incluido (16%) <b id="demo-tax">$0.00</b></span>
+                    </div>
+                    <div class="demo-cart-summary">
+                      <span id="demo-total-label">Total a cobrar</span>
+                      <strong id="demo-total">$0.00</strong>
+                    </div>
+                    <button class="demo-checkout" id="demo-checkout" type="button" disabled>
+                      <span id="demo-checkout-label">Cobrar</span><span>→</span>
+                    </button>
+                    <button class="demo-reset" id="demo-reset" type="button">Cancelar venta</button>
+                  </aside>
+                </div>
+                <section class="demo-inventory-view" id="demo-inventory-view" hidden>
+                  <div class="demo-inventory-heading">
+                    <div><span class="demo-overline">CATÁLOGO · MODO DE MUESTRA</span><h4>Inventario</h4></div>
+                    <span>Productos de ejemplo</span>
+                  </div>
+                  <div class="demo-inventory-table" id="demo-inventory-table"></div>
+                </section>
+                <section class="demo-orders-view" id="demo-orders-view" hidden></section>
+                <div class="demo-size-modal" id="demo-size-modal" hidden>
+                  <div class="demo-size-dialog" role="dialog" aria-modal="true" aria-labelledby="demo-size-title">
+                    <h3 id="demo-size-title">Selecciona tamaño</h3>
+                    <p>Elige una opción del menú de muestra.</p>
+                    <div id="demo-size-options"></div>
+                    <button id="demo-size-close" type="button">Cancelar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="demo-toast" id="demo-toast" role="status" aria-live="polite"></div>
+          </div>
+        </div>
+        <p class="demo-footnote reveal">
+          <span>ⓘ</span> Productos y precios de muestra. Ventas, inventario y pedidos solo simulan el flujo: no conectan con tus sistemas, no cobran y se borran al salir o actualizar.
+        </p>
+      </section>
       <section class="product-section page-width" id="comercio">
-        <div class="section-kicker reveal">02 — Comercio</div>
+        <div class="section-kicker reveal">03 — Comercio</div>
         <div class="product-detail-grid">
           <div class="detail-copy reveal">
             <span class="number-tag">01</span>
@@ -221,47 +332,49 @@
               Preguntar por OZZVON POS <span>↗</span>
             </a>
           </div>
-          <div class="real-screen reveal delay-1">
+          <div class="feature-preview reveal delay-1">
             <div class="screen-label">
-              <span><i></i> OZZVON POS · CAPTURA REAL</span>
-              <span>Inventario</span>
+              <span><i></i> OZZVON POS · VISTA DE MUESTRA</span>
+              <span>Comercio</span>
             </div>
-            <img
-              src="./real-assets/ozzvon-pos-inventory.png"
-              alt="Captura real del inventario de OZZVON POS"
-              loading="lazy"
-            >
-            <p>
-              La captura conserva la navegación y los estados reales de la
-              aplicación: Inicio, Ventas, Inventario, Compras, Clientes y
-              créditos, Reportes, Corte de caja, Usuarios y Ajustes.
-            </p>
+            <div class="feature-preview-content">
+              <span class="demo-overline">TU OPERACIÓN, EN UN SOLO LUGAR</span>
+              <h3>Todo listo para el día.</h3>
+              <div class="feature-preview-grid">
+                <span><i>▣</i><b>Ventas</b><small>Cobros y métodos de pago</small></span>
+                <span><i>▤</i><b>Inventario</b><small>Productos y existencias</small></span>
+                <span><i>↗</i><b>Compras</b><small>Proveedores y entradas</small></span>
+                <span><i>◷</i><b>Caja y reportes</b><small>Movimientos y cortes</small></span>
+              </div>
+              <a class="preview-try-link" href="#demo" data-demo-link="commerce">Probar OZZVON POS <span>→</span></a>
+            </div>
           </div>
         </div>
       </section>
       <section class="restaurant-section" id="restaurantes">
         <div class="page-width">
-          <div class="section-kicker reveal">03 — Restaurantes</div>
+          <div class="section-kicker reveal">04 — Restaurantes</div>
           <div class="product-detail-grid reverse">
-            <div class="real-screen restaurant-screen reveal">
+            <div class="feature-preview restaurant-preview reveal">
               <div class="screen-label">
-                <span><i></i> OZZVAN POR · CAPTURA REAL</span>
-                <span>Nuevo pedido</span>
+                <span><i></i> OZZVAN POS · VISTA DE MUESTRA</span>
+                <span>Restaurante</span>
               </div>
-              <img
-                src="./real-assets/ozzvan-por-nuevo-pedido.png"
-                alt="Captura real de nuevo pedido de OZZVAN POR"
-                loading="lazy"
-              >
-              <p>
-                La aplicación muestra su flujo real de pedido con Mesa, Para
-                llevar, Domicilio, selección de mesas, nombre del cliente, notas
-                y total.
-              </p>
+              <div class="feature-preview-content">
+                <span class="demo-overline">DEL MENÚ HASTA LA COMANDA</span>
+                <h3>Un pedido. Cada detalle.</h3>
+                <div class="restaurant-flow">
+                  <span><i>01</i><b>Elige servicio</b><small>Mesa · Para llevar · Domicilio</small></span>
+                  <span><i>02</i><b>Arma el menú</b><small>Categorías · productos · precios</small></span>
+                  <span><i>03</i><b>Sigue el pedido</b><small>Pendiente · preparación · concluido</small></span>
+                </div>
+                <a class="preview-try-link" href="#demo" data-demo-link="restaurant">Probar POS Restaurante <span>→</span></a>
+              </div>
             </div>
             <div class="detail-copy reveal delay-1">
               <span class="number-tag coral">02</span>
-              <h2>OZZVAN<br><em>POR</em></h2>
+              <h2>OZZVAN<br><em>POS</em></h2>
+              <p class="product-subtitle">PARA RESTAURANTES</p>
               <p class="lead">
                 Punto de venta para restaurantes con menú organizado y
                 seguimiento del pedido hasta su conclusión.
@@ -297,14 +410,14 @@
                 </div>
               </div>
               <a class="text-link" href="#contacto">
-                Preguntar por OZZVAN POR <span>↗</span>
+                Preguntar por OZZVAN POS Restaurante <span>↗</span>
               </a>
             </div>
           </div>
         </div>
       </section>
       <section class="workflow page-width" id="seguridad">
-        <div class="section-kicker reveal">04 — Lo que sí está respaldado</div>
+        <div class="section-kicker reveal">05 — Lo que sí está respaldado</div>
         <div class="workflow-head">
           <h2 class="reveal">
             Más que una pantalla:<br><em>una operación entendible.</em>
@@ -317,9 +430,9 @@
         <div class="workflow-grid">
           <article class="reveal">
             <span>01</span>
-            <b>Datos locales en POR</b>
+            <b>Datos locales en POS Restaurante</b>
             <p>
-              OZZVAN POR usa SQLite local; su base se crea automáticamente y
+              OZZVAN POS Restaurante usa SQLite local; su base se crea automáticamente y
               comparte menú y pedidos entre las ventanas conectadas al mismo
               servidor.
             </p>
@@ -344,13 +457,13 @@
         </div>
       </section>
       <section class="faq page-width">
-        <div class="section-kicker reveal">05 — Preguntas frecuentes</div>
+        <div class="section-kicker reveal">06 — Preguntas frecuentes</div>
         <div class="faq-list reveal delay-1">
           <details open>
             <summary>¿Cuál es para mi negocio?<span>+</span></summary>
             <p>
               OZZVON POS está orientado a comercios con ventas, inventario,
-              compras, clientes y caja. OZZVAN POR está orientado a restaurantes
+              compras, clientes y caja. OZZVAN POS Restaurante está orientado a restaurantes
               con menú, mesas, domicilio, pedidos para llevar y comandas.
             </p>
           </details>
@@ -359,25 +472,25 @@
             <p>
               Los dos proyectos incluyen lanzadores y configuración para
               aplicación de escritorio en Windows. OZZVON POS documenta la
-              construcción de un ejecutable con PyInstaller y OZZVAN POR incluye
+              construcción de un ejecutable con PyInstaller y OZZVAN POS Restaurante incluye
               su propio archivo de construcción.
             </p>
           </details>
           <details>
             <summary>¿Los datos se guardan en la aplicación?<span>+</span></summary>
             <p>
-              Depende del producto y la configuración. OZZVAN POR usa SQLite
+              Depende del producto y la configuración. OZZVAN POS Restaurante usa SQLite
               local. OZZVON POS está preparado para trabajar con una API y su
               documentación contempla una base remota; no se deben colocar
               credenciales de base de datos en el frontend.
             </p>
           </details>
           <details>
-            <summary>¿Las pantallas de esta web son reales?<span>+</span></summary>
+            <summary>¿Cómo funciona la demo de esta web?<span>+</span></summary>
             <p>
-              Sí. Las imágenes mostradas fueron renderizadas desde los HTML, CSS
-              y JavaScript incluidos en tu archivo WEB.rar. Las etiquetas indican
-              qué aplicación y vista corresponde a cada captura.
+              Puedes agregar o quitar productos, elegir el tipo de servicio y
+              simular el cierre. Usa artículos y precios de ejemplo: no procesa
+              pagos, no contacta tus sistemas y no guarda información.
             </p>
           </details>
         </div>
@@ -427,17 +540,16 @@
           <form
             class="contact-form"
             id="contact-form"
-            action="https://formsubmit.co/ajax/contacto@ozzvon.com"
+            action="https://formspree.io/f/xppwvanv"
             method="POST"
           >
             <input type="hidden" name="_subject" value="Nueva consulta desde Ozzvon">
-            <input type="hidden" name="_template" value="table">
             <div class="form-honeypot" aria-hidden="true">
               <label for="contact-website">Deja este campo vacío</label>
               <input
                 id="contact-website"
                 type="text"
-                name="_honey"
+                name="_gotcha"
                 tabindex="-1"
                 autocomplete="off"
               >
@@ -488,7 +600,7 @@
                 <select name="Producto" required>
                   <option value="" selected disabled>Selecciona una opción</option>
                   <option value="OZZVON POS">OZZVON POS</option>
-                  <option value="OZZVAN POR">OZZVAN POR</option>
+                  <option value="OZZVAN POS Restaurante">OZZVAN POS Restaurante</option>
                   <option value="Asesoría para elegir">Asesoría para elegir</option>
                 </select>
               </label>
@@ -503,12 +615,12 @@
               ></textarea>
             </label>
             <p class="form-privacy">
-              Al enviar, tus datos se compartirán con FormSubmit para entregarnos
-              tu consulta por correo.
+              Al enviar, tus datos se compartirán con Formspree para gestionar
+              tu consulta y notificarnos por correo.
             </p>
-            <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+            <p class="form-feedback" id="contact-form-feedback" role="status" aria-live="polite" hidden></p>
             <button class="button button-primary form-submit" type="submit">
-              Enviar consulta <span>↗</span>
+              <span class="form-submit-label">Enviar consulta</span> <span aria-hidden="true">↗</span>
             </button>
           </form>
         </div>
