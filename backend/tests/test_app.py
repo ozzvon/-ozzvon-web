@@ -433,6 +433,102 @@ class RegistrationApiTests(unittest.TestCase):
             404,
         )
 
+    def test_pos_owner_and_branch_users_use_their_selected_branch_database(self):
+        self.assertEqual(self.register().status_code, 201)
+        self.activate_software("pos_comercio", branch_limit=2)
+
+        owner_login = self.client.post(
+            "/api/pos/pos_comercio/login",
+            json={"email": "dueno@example.com", "password": "una-clave-segura"},
+        )
+
+        self.assertEqual(owner_login.status_code, 200)
+        owner_token = owner_login.json["token"]
+        branches = owner_login.json["branches"]
+        self.assertEqual(len(branches), 2)
+        owner_headers = {"Authorization": f"Bearer {owner_token}"}
+        first_branch = branches[0]
+        second_branch = branches[1]
+        first_api = (
+            f"/api/pos/pos_comercio/sucursales/{first_branch['id']}/api"
+        )
+        second_api = (
+            f"/api/pos/pos_comercio/sucursales/{second_branch['id']}/api"
+        )
+
+        users_response = self.client.get(f"{first_api}/users", headers=owner_headers)
+        self.assertEqual(users_response.status_code, 200)
+        self.assertEqual(users_response.json[0]["username"], "admin")
+        self.assertEqual(users_response.json[0]["role"], "Administrador")
+
+        roles_response = self.client.get(f"{first_api}/roles", headers=owner_headers)
+        self.assertEqual(roles_response.status_code, 200)
+        admin_role_id = next(
+            role["id"] for role in roles_response.json if role["name"] == "Administrador"
+        )
+        create_user_response = self.client.post(
+            f"{first_api}/users",
+            headers=owner_headers,
+            json={
+                "name": "Cajera sucursal 1",
+                "username": "cajera1",
+                "password": "clave-de-cajera",
+                "role_id": admin_role_id,
+            },
+        )
+        self.assertEqual(create_user_response.status_code, 201)
+
+        branch_two_users = self.client.get(
+            f"{second_api}/users", headers=owner_headers
+        )
+        self.assertEqual(branch_two_users.status_code, 200)
+        self.assertEqual(
+            [user["username"] for user in branch_two_users.json],
+            ["admin"],
+        )
+
+        employee_login = self.client.post(
+            f"/api/pos/pos_comercio/sucursales/{first_branch['id']}/login",
+            json={"username": "cajera1", "password": "clave-de-cajera"},
+        )
+        self.assertEqual(employee_login.status_code, 200)
+        employee_headers = {
+            "Authorization": f"Bearer {employee_login.json['token']}"
+        }
+        wrong_branch = self.client.get(
+            f"{second_api}/products", headers=employee_headers
+        )
+        self.assertEqual(wrong_branch.status_code, 403)
+        correct_branch = self.client.get(
+            f"{first_api}/products", headers=employee_headers
+        )
+        self.assertEqual(correct_branch.status_code, 200)
+
+        self.assertEqual(
+            self.client.get(f"{first_api}/../../app.py", headers=owner_headers).status_code,
+            404,
+        )
+
+    def test_pos_owner_login_rejects_disabled_plan_and_license(self):
+        self.assertEqual(self.register().status_code, 201)
+        disabled_plan = self.client.post(
+            "/api/pos/pos_comercio/login",
+            json={"email": "dueno@example.com", "password": "una-clave-segura"},
+        )
+        self.assertEqual(disabled_plan.status_code, 403)
+
+        self.activate_software("pos_comercio")
+        with closing(sqlite3.connect(self.master_path)) as connection, connection:
+            connection.execute(
+                "UPDATE usuarios SET licencia_estado = 'suspendida' WHERE email = ?",
+                ("dueno@example.com",),
+            )
+        suspended_license = self.client.post(
+            "/api/pos/pos_comercio/login",
+            json={"email": "dueno@example.com", "password": "una-clave-segura"},
+        )
+        self.assertEqual(suspended_license.status_code, 403)
+
     def test_login_and_account_show_server_managed_license_status(self):
         self.assertEqual(self.register().status_code, 201)
         with closing(sqlite3.connect(self.master_path)) as connection, connection:

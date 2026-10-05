@@ -24,6 +24,8 @@ WinSCP/SFTP:
 
 - El contenido de `WEB/web/` de este proyecto a `/var/www/ozzvon/web/`.
 - El contenido de `WEB/backend/` a `/var/www/ozzvon/backend/`.
+- El archivo `WEB/OZZVAN POS/backend/app.py` de este proyecto a
+  `/var/www/ozzvon/backend/pos_comercio_runtime.py`.
 
 Prepara Python, Nginx y una ubicación de datos que no se sirva como web:
 
@@ -189,6 +191,14 @@ Rutas principales:
 - `POST /api/registro`: crea la cuenta y su espacio de base de datos inicial;
   inicia sesión en el portal. Una cuenta nueva no recibe un plan POS activo.
 - `POST /api/auth/login` y `POST /api/auth/logout`: inicia y cierra sesión.
+- `POST /api/pos/pos_comercio/login`: autentica al propietario contra su
+  cuenta web, valida plan/licencia, crea las bases de sucursales autorizadas y
+  responde con un token de acceso temporal y las sucursales.
+- `POST /api/pos/pos_comercio/sucursales/<id>/login`: autentica al usuario POS
+  de esa sucursal.
+- `/api/pos/pos_comercio/sucursales/<id>/api/...`: expone las operaciones del
+  POS de comercio únicamente para la cuenta y sucursal de la sesión.
+- `POST /api/pos/logout`: revoca el token temporal del POS.
 - `GET /api/cuenta`: incluye los productos asignados, su estado y el límite de
   sucursales, además de los datos de la cuenta.
 - `GET /api/software/<clave>/sucursales`: requiere sesión y plan activo; crea
@@ -241,6 +251,23 @@ deshabilitadas, pero sus archivos no se borran. El servidor conserva las rutas
 privadas de las bases: el cliente debe leer y escribir mediante la API
 autorizada, nunca conectarse directamente a los archivos SQLite ni aceptar una
 ruta de base de datos enviada por el cliente.
+
+Para servir OZZVON POS Comercio, el runtime del POS debe estar desplegado como
+`backend/pos_comercio_runtime.py`, además de las dependencias de
+`backend/requirements.txt`. La app usa `https://www.ozzvon.com` como URL HTTPS
+predeterminada; si el dominio cambia, actualízalo en
+`WEB/OZZVAN POS/js/config.js` o sobrescríbelo mediante `OZZVON_API_BASE` en el
+`.env` técnico de la instalación. El usuario solo introduce correo y
+contraseña. El programa permite seleccionar la sucursal de este dispositivo y
+usa la cuenta superusuario inicial para administrar los usuarios propios de
+esa sucursal. El token del POS dura 12 horas, se almacena como hash en la base
+maestra y se vuelve a pedir al abrir el programa.
+
+El API del POS ejecuta las operaciones de comercio sobre la SQLite privada de
+la sucursal seleccionada. Las contraseñas de usuarios de sucursal se validan
+contra la tabla `usuarios` de esa misma base; un usuario de una sucursal no
+puede iniciar sesión en otra. El runtime local del POS no necesita conexión
+PostgreSQL para usar el hosting.
 
 Las plantillas versionadas por el proyecto están en `backend/schema/`:
 

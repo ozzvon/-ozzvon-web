@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import logging
 import hashlib
+import importlib.util
+import io
 import os
 import re
 import secrets
 import sqlite3
 import smtplib
+import sys
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
@@ -22,10 +25,12 @@ from werkzeug.exceptions import RequestEntityTooLarge
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 MAX_PASSWORD_BYTES = 72
 PASSWORD_RESET_TTL = timedelta(hours=1)
+POS_SESSION_TTL = timedelta(hours=12)
 SOFTWARE_CATALOG = {
     "pos_comercio": "OZZVON POS",
     "pos_restaurante": "OZZVAN POS Restaurante",
 }
+_POS_COMERCIO_RUNTIME = None
 
 
 def _connect(database_path: Path) -> sqlite3.Connection:
@@ -117,6 +122,15 @@ def _initialize_master_database(database_path: Path) -> None:
                 FOREIGN KEY (usuario_id, software_key)
                     REFERENCES usuario_software(usuario_id, software_key)
                     ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS pos_access_tokens (
+                token_hash TEXT PRIMARY KEY,
+                usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                software_key TEXT NOT NULL,
+                sucursal_id INTEGER REFERENCES sucursales(id) ON DELETE CASCADE,
+                pos_usuario_id INTEGER,
+                expires_at TEXT NOT NULL,
+                created_at TEXT NOT NULL
             );
             """
         )
@@ -441,6 +455,151 @@ def _ensure_software_branches(user_id: int, software_key: str) -> list[dict[str,
         ]
 
 
+def _load_pos_comercio_runtime():
+    global _POS_COMERCIO_RUNTIME
+    if _POS_COMERCIO_RUNTIME is not None:
+        return _POS_COMERCIO_RUNTIME
+    deployed_path = Path(__file__).parent / "pos_comercio_runtime.py"
+    development_path = (
+        Path(__file__).resolve().parents[1] / "OZZVAN POS" / "backend" / "app.py"
+    )
+    runtime_path = deployed_path if deployed_path.is_file() else development_path
+    if not runtime_path.is_file():
+        raise FileNotFoundError(
+            "Falta backend/pos_comercio_runtime.py en el servidor."
+        )
+    spec = importlib.util.spec_from_file_location(
+        "ozzvon_pos_comercio_runtime", runtime_path
+    )
+    if spec is None or spec.loader is None:
+        raise ImportError("No se pudo cargar el runtime de OZZVON POS Comercio.")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    _POS_COMERCIO_RUNTIME = module
+    return module
+
+
+def _ensure_branch_superuser(database_path: Path, business_name: str) -> int:
+    runtime = _load_pos_comercio_runtime()
+    token = runtime.use_tenant_database(str(database_path))
+    try:
+        database = runtime.connection()
+        try:
+            admin = database.execute(
+                "SELECT id FROM usuarios WHERE usuario = 'admin'"
+            ).fetchone()
+            if admin is None:
+                role = database.execute(
+                    "SELECT id FROM roles WHERE nombre = 'Administrador'"
+                ).fetchone()
+                if role is None:
+                    raise sqlite3.IntegrityError(
+                        "No existe el rol Administrador en la base de la sucursal."
+                    )
+                random_password_hash = hashlib.sha256(
+                    secrets.token_bytes(64)
+                ).hexdigest()
+                cursor = database.execute(
+                    """
+                    INSERT INTO usuarios (nombre, usuario, password_hash, rol_id)
+                    VALUES (?, 'admin', ?, ?)
+                    """,
+                    ("Superusuario", random_password_hash, role["id"]),
+                )
+                admin_id = cursor.lastrowid
+            else:
+                admin_id = admin["id"]
+                database.execute(
+                    "UPDATE usuarios SET nombre = 'Superusuario', activo = 1 WHERE id = ?",
+                    (admin_id,),
+                )
+            database.execute(
+                "UPDATE ajustes SET valor = ? WHERE clave = 'business_name'",
+                (business_name,),
+            )
+            database.commit()
+            return admin_id
+        finally:
+            database.close()
+    finally:
+        runtime.reset_tenant_database(token)
+
+
+def _pos_token_record(token: str | None):
+    if not token:
+        return None
+    now = datetime.now(timezone.utc).isoformat()
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    with closing(_connect(Path(current_app.config["MASTER_DB_PATH"]))) as connection, connection:
+        connection.execute("DELETE FROM pos_access_tokens WHERE expires_at <= ?", (now,))
+        return connection.execute(
+            """
+            SELECT token.usuario_id, token.software_key, token.sucursal_id,
+                   token.pos_usuario_id, user.licencia_estado, entitlement.activo,
+                   entitlement.sucursales_max, user.nombre_negocio
+            FROM pos_access_tokens AS token
+            JOIN usuarios AS user ON user.id = token.usuario_id
+            JOIN usuario_software AS entitlement
+              ON entitlement.usuario_id = token.usuario_id
+             AND entitlement.software_key = token.software_key
+            WHERE token.token_hash = ? AND token.expires_at > ?
+            """,
+            (token_hash, now),
+        ).fetchone()
+
+
+def _create_pos_access_token(
+    user_id: int,
+    branch_id: int | None = None,
+    pos_user_id: int | None = None,
+) -> str:
+    raw_token = secrets.token_urlsafe(48)
+    now = datetime.now(timezone.utc)
+    with closing(_connect(Path(current_app.config["MASTER_DB_PATH"]))) as connection, connection:
+        connection.execute(
+            """
+            INSERT INTO pos_access_tokens (
+                token_hash, usuario_id, software_key, sucursal_id,
+                pos_usuario_id, expires_at, created_at
+            ) VALUES (?, ?, 'pos_comercio', ?, ?, ?, ?)
+            """,
+            (
+                hashlib.sha256(raw_token.encode("utf-8")).hexdigest(),
+                user_id,
+                branch_id,
+                pos_user_id,
+                (now + POS_SESSION_TTL).isoformat(),
+                now.isoformat(),
+            ),
+        )
+    return raw_token
+
+
+def _pos_api_path_allowed(method: str, path: str) -> bool:
+    exact_paths = {
+        "GET": {
+            "products", "clients", "sales", "suppliers", "purchases",
+            "cash/current", "cash/history", "reports", "settings", "tax-rate",
+            "ticket-templates", "invoices", "users", "roles", "health",
+            "business-name",
+        },
+        "POST": {
+            "products/bulk", "logout", "users", "clients", "suppliers",
+            "purchases", "payments", "sales", "cash/open", "cash/movement",
+            "cash/close", "settings", "ticket-templates", "invoices",
+        },
+    }
+    if path in exact_paths.get(method, set()):
+        return True
+    if method not in {"PUT", "DELETE"}:
+        return False
+    return bool(
+        re.fullmatch(r"(?:products|clients|users)/[1-9]\d*", path)
+        or re.fullmatch(r"ticket-templates/[1-9]\d*", path)
+    )
+
+
 def _reset_email_configured() -> bool:
     configured = all(
         current_app.config.get(key)
@@ -511,7 +670,7 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         PERMANENT_SESSION_LIFETIME=timedelta(days=7),
-        MAX_CONTENT_LENGTH=16 * 1024,
+        MAX_CONTENT_LENGTH=1_000_000,
     )
     if test_config:
         app.config.update(test_config)
@@ -683,6 +842,264 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             session.clear()
             return _error("No se encontró la cuenta.", 401)
         return jsonify({"cuenta": profile}), 200
+
+    @app.post("/api/pos/pos_comercio/login")
+    def pos_owner_login():
+        data = request.get_json(silent=True)
+        email = data.get("email") if isinstance(data, dict) else None
+        password = data.get("password") if isinstance(data, dict) else None
+        if not isinstance(email, str) or not isinstance(password, str):
+            return _error("Escribe el correo y contraseña de tu cuenta Ozzvon.", 400)
+        with closing(_connect(Path(current_app.config["MASTER_DB_PATH"]))) as connection:
+            user = connection.execute(
+                """
+                SELECT id, email, password_hash, nombre_negocio, licencia_estado
+                FROM usuarios WHERE email = ? COLLATE NOCASE
+                """,
+                (email.strip(),),
+            ).fetchone()
+        try:
+            password_matches = user is not None and bcrypt.checkpw(
+                password.encode("utf-8"), user["password_hash"].encode("ascii")
+            )
+        except (ValueError, UnicodeEncodeError):
+            password_matches = False
+        if not password_matches:
+            return _error("El correo o la contraseña no son correctos.", 401)
+        _, access_error = _check_software_access(user["id"], "pos_comercio")
+        if access_error:
+            return access_error
+        try:
+            branches = _ensure_software_branches(user["id"], "pos_comercio")
+            for branch in branches:
+                with closing(_connect(Path(current_app.config["MASTER_DB_PATH"]))) as connection:
+                    branch_database = connection.execute(
+                        "SELECT db_path FROM sucursales WHERE id = ? AND usuario_id = ?",
+                        (branch["id"], user["id"]),
+                    ).fetchone()
+                if branch_database is None:
+                    return _error("No se encontró la base de datos de una sucursal.", 500)
+                _ensure_branch_superuser(
+                    Path(branch_database["db_path"]), user["nombre_negocio"]
+                )
+        except (sqlite3.Error, OSError, ImportError, RuntimeError):
+            current_app.logger.exception(
+                "No se pudo preparar el acceso del propietario a OZZVON POS."
+            )
+            return _error("No se pudo preparar el acceso a las sucursales.", 500)
+        access_token = _create_pos_access_token(user["id"])
+        return jsonify(
+            {
+                "token": access_token,
+                "user": {
+                    "id": user["id"],
+                    "name": user["nombre_negocio"],
+                    "username": user["email"],
+                    "role": "Superusuario",
+                    "permissions": [
+                        "dashboard.view", "sales.create", "inventory.view",
+                        "inventory.manage", "clients.view", "clients.manage",
+                        "reports.view", "cash.view", "cash.manage", "users.manage",
+                        "settings.manage", "billing.view",
+                    ],
+                },
+                "branches": branches,
+            }
+        ), 200
+
+    @app.post("/api/pos/pos_comercio/sucursales/<int:branch_id>/login")
+    def pos_staff_login(branch_id: int):
+        data = request.get_json(silent=True)
+        username = data.get("username") if isinstance(data, dict) else None
+        password = data.get("password") if isinstance(data, dict) else None
+        if not isinstance(username, str) or not isinstance(password, str):
+            return _error("Escribe tu usuario y contraseña del POS.", 400)
+        with closing(_connect(Path(current_app.config["MASTER_DB_PATH"]))) as connection:
+            branch = connection.execute(
+                """
+                SELECT s.id, s.usuario_id, s.db_path, u.licencia_estado, us.activo,
+                       us.sucursales_max
+                FROM sucursales AS s
+                JOIN usuarios AS u ON u.id = s.usuario_id
+                JOIN usuario_software AS us
+                  ON us.usuario_id = s.usuario_id
+                 AND us.software_key = s.software_key
+                WHERE s.id = ? AND s.software_key = 'pos_comercio'
+                  AND s.activa = 1 AND s.numero <= us.sucursales_max
+                """,
+                (branch_id,),
+            ).fetchone()
+        if (
+            branch is None
+            or branch["licencia_estado"] != "activa"
+            or not branch["activo"]
+        ):
+            return _error("Esta sucursal no tiene un plan activo.", 403)
+        try:
+            runtime = _load_pos_comercio_runtime()
+        except (OSError, ImportError, RuntimeError):
+            current_app.logger.exception("No se pudo cargar el runtime de OZZVON POS.")
+            return _error("El inicio de sesión del POS no está disponible.", 503)
+        try:
+            path = Path(branch["db_path"])
+            if not path.is_file():
+                return _error("No se encontró la base de datos de la sucursal.", 404)
+            context_token = runtime.use_tenant_database(str(path))
+            try:
+                database = runtime.connection()
+                try:
+                    employee = database.execute(
+                        """
+                        SELECT id, nombre, usuario, password_hash
+                        FROM usuarios WHERE usuario = ? AND activo = 1
+                        """,
+                        (username.strip(),),
+                    ).fetchone()
+                finally:
+                    database.close()
+            finally:
+                runtime.reset_tenant_database(context_token)
+        except (sqlite3.Error, OSError, ImportError, RuntimeError):
+            current_app.logger.exception("No se pudo validar el usuario de sucursal.")
+            return _error("No se pudo iniciar sesión en esta sucursal.", 500)
+        password_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
+        if employee is None or not secrets.compare_digest(
+            employee["password_hash"], password_hash
+        ):
+            return _error("El usuario o la contraseña no son correctos.", 401)
+        token = _create_pos_access_token(
+            branch["usuario_id"], branch_id, employee["id"]
+        )
+        try:
+            context_token = runtime.use_tenant_database(str(path))
+            try:
+                database = runtime.connection()
+                try:
+                    user = runtime.user_payload(database, employee["id"])
+                finally:
+                    database.close()
+            finally:
+                runtime.reset_tenant_database(context_token)
+        except (sqlite3.Error, OSError, ImportError, RuntimeError, ValueError, runtime.ApiError):
+            current_app.logger.exception("No se pudo cargar el perfil del usuario POS.")
+            return _error("No se pudo cargar el perfil del usuario.", 500)
+        return jsonify({"token": token, "user": user}), 200
+
+    @app.get("/api/pos/pos_comercio/branches")
+    def pos_list_branches():
+        access = _pos_token_record(
+            request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+        )
+        if access is None or access["sucursal_id"] is not None or access["pos_usuario_id"] is not None:
+            return _error("Inicia sesión como propietario para consultar las sucursales.", 401)
+        if access["licencia_estado"] != "activa" or not access["activo"]:
+            return _error("El plan OZZVON POS no está activo.", 403)
+        try:
+            branches = _ensure_software_branches(access["usuario_id"], "pos_comercio")
+        except (sqlite3.Error, OSError):
+            current_app.logger.exception("No se pudieron actualizar las sucursales POS.")
+            return _error("No se pudieron consultar las sucursales.", 500)
+        return jsonify({"branches": branches}), 200
+
+    @app.post("/api/pos/logout")
+    def pos_logout():
+        token = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+        if token:
+            with closing(_connect(Path(current_app.config["MASTER_DB_PATH"]))) as connection, connection:
+                connection.execute(
+                    "DELETE FROM pos_access_tokens WHERE token_hash = ?",
+                    (hashlib.sha256(token.encode("utf-8")).hexdigest(),),
+                )
+        return jsonify({"mensaje": "Sesión cerrada."}), 200
+
+    @app.route(
+        "/api/pos/pos_comercio/sucursales/<int:branch_id>/api/<path:pos_path>",
+        methods=["GET", "POST", "PUT", "DELETE"],
+    )
+    def pos_branch_api(branch_id: int, pos_path: str):
+        if not _pos_api_path_allowed(request.method, pos_path):
+            return _error("Endpoint del POS no disponible.", 404)
+        raw_token = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+        access = _pos_token_record(raw_token)
+        if (
+            access is None
+            or access["licencia_estado"] != "activa"
+            or not access["activo"]
+        ):
+            return _error("La sesión o el plan del POS ya no están activos.", 401)
+        if access["sucursal_id"] is not None and access["sucursal_id"] != branch_id:
+            return _error("Esta sesión no pertenece a la sucursal seleccionada.", 403)
+        with closing(_connect(Path(current_app.config["MASTER_DB_PATH"]))) as connection:
+            branch = connection.execute(
+                """
+                SELECT id, db_path FROM sucursales
+                WHERE id = ? AND usuario_id = ? AND software_key = 'pos_comercio'
+                  AND activa = 1 AND numero <= ?
+                """,
+                (branch_id, access["usuario_id"], access["sucursales_max"]),
+            ).fetchone()
+        if branch is None:
+            return _error("La sucursal no existe o no está autorizada.", 404)
+        database_path = Path(branch["db_path"])
+        if not database_path.is_file():
+            return _error("No se encontró la base de datos de la sucursal.", 404)
+        try:
+            runtime = _load_pos_comercio_runtime()
+        except (OSError, ImportError, RuntimeError):
+            current_app.logger.exception("No se pudo cargar el runtime de OZZVON POS.")
+            return _error("El API de OZZVON POS no está disponible.", 503)
+        try:
+            if access["pos_usuario_id"] is None:
+                user_id = _ensure_branch_superuser(
+                    database_path, access["nombre_negocio"]
+                )
+            else:
+                user_id = access["pos_usuario_id"]
+                context_token = runtime.use_tenant_database(str(database_path))
+                try:
+                    database = runtime.connection()
+                    try:
+                        runtime.user_payload(database, user_id)
+                    finally:
+                        database.close()
+                finally:
+                    runtime.reset_tenant_database(context_token)
+            internal_token = secrets.token_urlsafe(32)
+            runtime.SESSIONS[internal_token] = user_id
+            body = request.get_data(cache=True)
+
+            class BufferedPosHandler(runtime.Handler):
+                def __init__(self):
+                    self.path = "/api/" + pos_path
+                    if request.query_string:
+                        self.path += "?" + request.query_string.decode("ascii")
+                    self.headers = {
+                        "Authorization": f"Bearer {internal_token}",
+                        "Content-Length": str(len(body)),
+                    }
+                    self.rfile = io.BytesIO(body)
+                    self.status = 200
+                    self.payload = None
+
+                def send_json(self, payload, status=200):
+                    self.payload = payload
+                    self.status = int(status)
+
+            handler = BufferedPosHandler()
+            context_token = runtime.use_tenant_database(str(database_path))
+            try:
+                getattr(handler, f"do_{request.method}")()
+            finally:
+                runtime.reset_tenant_database(context_token)
+                runtime.SESSIONS.pop(internal_token, None)
+        except runtime.ApiError as error:
+            return jsonify({"error": str(error)}), 403
+        except (sqlite3.Error, OSError, ValueError, TypeError):
+            current_app.logger.exception("Falló una operación del POS en su sucursal.")
+            return _error("No se pudo completar la operación del POS.", 500)
+        if handler.status == 204:
+            return "", 204
+        return jsonify(handler.payload), handler.status
 
     @app.get("/api/software/<software_key>/sucursales")
     def software_branches(software_key: str):

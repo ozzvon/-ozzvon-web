@@ -336,4 +336,5 @@ refreshAccount().catch(error=>{
   }
 }).finally(updateAccountButton);
 configureGoogle();
+if(location.hash==='#registro')registrationDialog?.showModal();
 if(new URLSearchParams(location.hash.slice(1)).has('restablecer'))resetDialog?.showModal();
