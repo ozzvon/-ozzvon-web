@@ -477,6 +477,20 @@ class RegistrationApiTests(unittest.TestCase):
             },
         )
         self.assertEqual(create_user_response.status_code, 201)
+        cashier_role_id = next(
+            role["id"] for role in roles_response.json if role["name"] == "Cajero"
+        )
+        cashier_response = self.client.post(
+            f"{first_api}/users",
+            headers=owner_headers,
+            json={
+                "name": "Cajero con permisos limitados",
+                "username": "cajero-limitado",
+                "password": "clave-de-cajero",
+                "role_id": cashier_role_id,
+            },
+        )
+        self.assertEqual(cashier_response.status_code, 201)
 
         branch_two_users = self.client.get(
             f"{second_api}/users", headers=owner_headers
@@ -503,6 +517,37 @@ class RegistrationApiTests(unittest.TestCase):
             f"{first_api}/products", headers=employee_headers
         )
         self.assertEqual(correct_branch.status_code, 200)
+        for _ in range(5):
+            invalid_staff_login = self.client.post(
+                f"/api/pos/pos_comercio/sucursales/{first_branch['id']}/login",
+                json={"username": "cajera1", "password": "incorrecta"},
+            )
+            self.assertEqual(invalid_staff_login.status_code, 401)
+        locked_staff_login = self.client.post(
+            f"/api/pos/pos_comercio/sucursales/{first_branch['id']}/login",
+            json={"username": "cajera1", "password": "incorrecta"},
+        )
+        self.assertEqual(locked_staff_login.status_code, 429)
+
+        cashier_login = self.client.post(
+            f"/api/pos/pos_comercio/sucursales/{first_branch['id']}/login",
+            json={"username": "cajero-limitado", "password": "clave-de-cajero"},
+            headers={"X-Forwarded-For": "203.0.113.24"},
+        )
+        self.assertEqual(cashier_login.status_code, 200)
+        cashier_headers = {
+            "Authorization": f"Bearer {cashier_login.json['token']}"
+        }
+        denied_settings = self.client.get(
+            f"{first_api}/settings", headers=cashier_headers
+        )
+        self.assertEqual(denied_settings.status_code, 403)
+        denied_client_creation = self.client.post(
+            f"{first_api}/clients",
+            headers=cashier_headers,
+            json={"name": "No autorizado"},
+        )
+        self.assertEqual(denied_client_creation.status_code, 403)
 
         self.assertEqual(
             self.client.get(f"{first_api}/../../app.py", headers=owner_headers).status_code,
@@ -528,6 +573,22 @@ class RegistrationApiTests(unittest.TestCase):
             json={"email": "dueno@example.com", "password": "una-clave-segura"},
         )
         self.assertEqual(suspended_license.status_code, 403)
+
+    def test_pos_owner_login_rate_limits_repeated_bad_passwords(self):
+        self.assertEqual(self.register().status_code, 201)
+        for _ in range(5):
+            response = self.client.post(
+                "/api/pos/pos_comercio/login",
+                json={"email": "dueno@example.com", "password": "incorrecta"},
+            )
+            self.assertEqual(response.status_code, 401)
+
+        limited = self.client.post(
+            "/api/pos/pos_comercio/login",
+            json={"email": "dueno@example.com", "password": "incorrecta"},
+        )
+        self.assertEqual(limited.status_code, 429)
+        self.assertGreater(int(limited.headers["Retry-After"]), 0)
 
     def test_login_and_account_show_server_managed_license_status(self):
         self.assertEqual(self.register().status_code, 201)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import hashlib
+import hmac
 import importlib.util
 import io
 import os
@@ -10,6 +11,7 @@ import secrets
 import sqlite3
 import smtplib
 import sys
+import time
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
@@ -21,11 +23,18 @@ import bcrypt
 from flask import Flask, current_app, jsonify, request, session
 from flask_cors import CORS
 from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 MAX_PASSWORD_BYTES = 72
 PASSWORD_RESET_TTL = timedelta(hours=1)
 POS_SESSION_TTL = timedelta(hours=12)
+POS_LOGIN_FAILURE_LIMIT = 5
+POS_LOGIN_WINDOW_SECONDS = 900
+POS_LOGIN_LOCK_SECONDS = 900
+DUMMY_BCRYPT_HASH = bcrypt.hashpw(
+    b"not-a-valid-ozzvon-account-password", bcrypt.gensalt()
+)
 SOFTWARE_CATALOG = {
     "pos_comercio": "OZZVON POS",
     "pos_restaurante": "OZZVAN POS Restaurante",
@@ -131,6 +140,12 @@ def _initialize_master_database(database_path: Path) -> None:
                 pos_usuario_id INTEGER,
                 expires_at TEXT NOT NULL,
                 created_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS pos_login_attempts (
+                attempt_key TEXT PRIMARY KEY,
+                failures INTEGER NOT NULL,
+                window_started REAL NOT NULL,
+                blocked_until REAL NOT NULL DEFAULT 0
             );
             """
         )
@@ -497,9 +512,9 @@ def _ensure_branch_superuser(database_path: Path, business_name: str) -> int:
                     raise sqlite3.IntegrityError(
                         "No existe el rol Administrador en la base de la sucursal."
                     )
-                random_password_hash = hashlib.sha256(
-                    secrets.token_bytes(64)
-                ).hexdigest()
+                random_password_hash = runtime.password_hash(
+                    secrets.token_urlsafe(48)
+                )
                 cursor = database.execute(
                     """
                     INSERT INTO usuarios (nombre, usuario, password_hash, rol_id)
@@ -576,12 +591,89 @@ def _create_pos_access_token(
     return raw_token
 
 
+def _pos_login_attempt_key(scope: str, identity: str) -> str:
+    secret = str(current_app.config["SECRET_KEY"]).encode("utf-8")
+    normalized = f"{scope}:{identity.strip().casefold()}".encode("utf-8")
+    return hmac.new(secret, normalized, hashlib.sha256).hexdigest()
+
+
+def _pos_login_attempt_keys(scope: str, identity: str) -> list[str]:
+    client_address = request.remote_addr or "unknown"
+    return [
+        _pos_login_attempt_key(scope, identity),
+        _pos_login_attempt_key(f"{scope}-ip", client_address),
+    ]
+
+
+def _pos_login_retry_after(attempt_keys: list[str]) -> int:
+    now = time.time()
+    with closing(_connect(Path(current_app.config["MASTER_DB_PATH"]))) as connection:
+        row = connection.execute(
+            """
+            SELECT MAX(blocked_until) AS blocked_until FROM pos_login_attempts
+            WHERE attempt_key IN (?, ?)
+            """,
+            attempt_keys,
+        ).fetchone()
+    if row is None or row["blocked_until"] is None:
+        return 0
+    return max(0, int(row["blocked_until"] - now + 0.999))
+
+
+def _record_pos_login_attempt(attempt_keys: list[str], *, succeeded: bool) -> None:
+    now = time.time()
+    with closing(_connect(Path(current_app.config["MASTER_DB_PATH"]))) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        for attempt_key in attempt_keys:
+            if succeeded:
+                connection.execute(
+                    "DELETE FROM pos_login_attempts WHERE attempt_key = ?",
+                    (attempt_key,),
+                )
+            else:
+                row = connection.execute(
+                    """
+                    SELECT failures, window_started FROM pos_login_attempts
+                    WHERE attempt_key = ?
+                    """,
+                    (attempt_key,),
+                ).fetchone()
+                if row is None or now - row["window_started"] >= POS_LOGIN_WINDOW_SECONDS:
+                    failures = 1
+                    window_started = now
+                else:
+                    failures = row["failures"] + 1
+                    window_started = row["window_started"]
+                blocked_until = (
+                    now + POS_LOGIN_LOCK_SECONDS
+                    if failures >= POS_LOGIN_FAILURE_LIMIT
+                    else 0
+                )
+                connection.execute(
+                    """
+                    INSERT INTO pos_login_attempts (
+                        attempt_key, failures, window_started, blocked_until
+                    ) VALUES (?, ?, ?, ?)
+                    ON CONFLICT(attempt_key) DO UPDATE SET
+                        failures = excluded.failures,
+                        window_started = excluded.window_started,
+                        blocked_until = excluded.blocked_until
+                    """,
+                    (attempt_key, failures, window_started, blocked_until),
+                )
+        connection.execute(
+            "DELETE FROM pos_login_attempts WHERE window_started < ?",
+            (now - POS_LOGIN_WINDOW_SECONDS * 2,),
+        )
+        connection.commit()
+
+
 def _pos_api_path_allowed(method: str, path: str) -> bool:
     exact_paths = {
         "GET": {
             "products", "clients", "sales", "suppliers", "purchases",
             "cash/current", "cash/history", "reports", "settings", "tax-rate",
-            "ticket-templates", "invoices", "users", "roles", "health",
+            "ticket-templates", "invoices", "users", "roles",
             "business-name",
         },
         "POST": {
@@ -674,14 +766,23 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     )
     if test_config:
         app.config.update(test_config)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     allowed_origins = [
         origin.strip()
-        for origin in os.environ.get("CORS_ORIGINS", "*").split(",")
+        for origin in os.environ.get("CORS_ORIGINS", "").split(",")
         if origin.strip()
     ]
-    CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
+    if allowed_origins:
+        CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
     _initialize_master_database(Path(app.config["MASTER_DB_PATH"]))
+
+    @app.after_request
+    def disable_pos_response_caching(response):
+        if request.path.startswith("/api/pos/"):
+            response.headers["Cache-Control"] = "no-store"
+            response.headers["Pragma"] = "no-cache"
+        return response
 
     @app.errorhandler(RequestEntityTooLarge)
     def handle_request_too_large(_exception: RequestEntityTooLarge):
@@ -787,9 +888,14 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
                 (email.strip(),),
             ).fetchone()
         try:
-            password_matches = user is not None and bcrypt.checkpw(
-                password.encode("utf-8"), user["password_hash"].encode("ascii")
+            candidate_hash = (
+                user["password_hash"].encode("ascii")
+                if user is not None
+                else DUMMY_BCRYPT_HASH
             )
+            password_matches = bcrypt.checkpw(
+                password.encode("utf-8"), candidate_hash
+            ) and user is not None
         except (ValueError, UnicodeEncodeError):
             password_matches = False
         if not password_matches:
@@ -850,6 +956,16 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         password = data.get("password") if isinstance(data, dict) else None
         if not isinstance(email, str) or not isinstance(password, str):
             return _error("Escribe el correo y contraseña de tu cuenta Ozzvon.", 400)
+        if len(email) > 254 or len(password.encode("utf-8")) > 1024:
+            return _error("El correo o la contraseña no son correctos.", 401)
+        attempt_keys = _pos_login_attempt_keys("owner", email)
+        retry_after = _pos_login_retry_after(attempt_keys)
+        if retry_after:
+            return (
+                jsonify({"mensaje": "Demasiados intentos. Espera antes de volver a intentar."}),
+                429,
+                {"Retry-After": str(retry_after)},
+            )
         with closing(_connect(Path(current_app.config["MASTER_DB_PATH"]))) as connection:
             user = connection.execute(
                 """
@@ -865,7 +981,9 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         except (ValueError, UnicodeEncodeError):
             password_matches = False
         if not password_matches:
+            _record_pos_login_attempt(attempt_keys, succeeded=False)
             return _error("El correo o la contraseña no son correctos.", 401)
+        _record_pos_login_attempt(attempt_keys, succeeded=True)
         _, access_error = _check_software_access(user["id"], "pos_comercio")
         if access_error:
             return access_error
@@ -914,6 +1032,18 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         password = data.get("password") if isinstance(data, dict) else None
         if not isinstance(username, str) or not isinstance(password, str):
             return _error("Escribe tu usuario y contraseña del POS.", 400)
+        if len(username) > 128 or len(password.encode("utf-8")) > 1024:
+            return _error("El usuario o la contraseña no son correctos.", 401)
+        attempt_keys = _pos_login_attempt_keys(
+            "staff", f"{branch_id}:{username}"
+        )
+        retry_after = _pos_login_retry_after(attempt_keys)
+        if retry_after:
+            return (
+                jsonify({"mensaje": "Demasiados intentos. Espera antes de volver a intentar."}),
+                429,
+                {"Retry-After": str(retry_after)},
+            )
         with closing(_connect(Path(current_app.config["MASTER_DB_PATH"]))) as connection:
             branch = connection.execute(
                 """
@@ -962,11 +1092,28 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         except (sqlite3.Error, OSError, ImportError, RuntimeError):
             current_app.logger.exception("No se pudo validar el usuario de sucursal.")
             return _error("No se pudo iniciar sesión en esta sucursal.", 500)
-        password_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
-        if employee is None or not secrets.compare_digest(
-            employee["password_hash"], password_hash
-        ):
+        password_matches = runtime.verify_password(
+            employee["password_hash"] if employee else runtime.DUMMY_PASSWORD_HASH,
+            password,
+        )
+        if employee is None or not password_matches:
+            _record_pos_login_attempt(attempt_keys, succeeded=False)
             return _error("El usuario o la contraseña no son correctos.", 401)
+        _record_pos_login_attempt(attempt_keys, succeeded=True)
+        if runtime.password_needs_rehash(employee["password_hash"]):
+            context_token = runtime.use_tenant_database(str(path))
+            try:
+                database = runtime.connection()
+                try:
+                    database.execute(
+                        "UPDATE usuarios SET password_hash = ? WHERE id = ?",
+                        (runtime.password_hash(password), employee["id"]),
+                    )
+                    database.commit()
+                finally:
+                    database.close()
+            finally:
+                runtime.reset_tenant_database(context_token)
         token = _create_pos_access_token(
             branch["usuario_id"], branch_id, employee["id"]
         )
