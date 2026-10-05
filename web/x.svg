@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Logo Ozzvon</title>
+  <desc id="desc">Símbolo orbital morado con flecha ascendente que representa crecimiento y control.</desc>
+  <defs>
+    <linearGradient id="ozzvonPurple" x1="72" y1="420" x2="425" y2="78" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#35117f"/>
+      <stop offset="0.48" stop-color="#6c1ca8"/>
+      <stop offset="1" stop-color="#b735cc"/>
+    </linearGradient>
+    <linearGradient id="ozzvonPurpleDark" x1="190" y1="386" x2="391" y2="190" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2b0d70"/>
+      <stop offset="1" stop-color="#8f25b9"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#ozzvonPurple)">
+    <path d="M83 402 151 329c17-18 31-35 39-53 9-20 13-42 13-67 0-77 61-139 138-139 32 0 62 11 87 29l49-49-14 103-104-16 37-37c-16-11-35-18-55-18-46 0-84 37-84 83 0 36-11 69-32 97-13 18-31 36-51 57l-56 57H83Z"/>
+    <path d="m145 354 54-56c17-18 28-35 34-53 8-23 24-41 45-53 17-10 35-15 54-15 22 0 42 7 58 20l-39 39c-7-4-14-6-22-6-19 0-35 12-42 29-8 20-21 39-39 57l-63 64-40-26Z"/>
+  </g>
+  <path fill="url(#ozzvonPurpleDark)" d="M279 238c12 0 24-3 35-9 13-7 24-17 31-30 10-19 13-39 8-59 22 12 39 34 45 59 7 31 1 64-17 90-24 35-65 56-108 56-33 0-64-13-87-35l45-51c14 13 28 19 48 19Z"/>
+  <path fill="url(#ozzvonPurple)" d="M176 389c30 22 65 34 102 34 57 0 109-28 140-75 26-39 33-87 18-131l-45 43c4 26-2 52-16 74-21 32-57 52-97 52-26 0-51-8-70-23l-32 26Z"/>
+  <circle cx="280" cy="270" r="42" fill="#f4effa"/>
+</svg>
