@@ -54,6 +54,23 @@ function renderAccount(){
   license.textContent={activa:'Activa',suspendida:'Suspendida',baja:'De baja'}[accountData.licencia_estado]||'Sin estado';
   license.classList.toggle('is-suspended',accountData.licencia_estado==='suspendida');
   license.classList.toggle('is-cancelled',accountData.licencia_estado==='baja');
+  const softwareList=document.querySelector('#account-software');
+  softwareList.replaceChildren(...(accountData.software||[]).map(product=>{
+    const item=document.createElement('li');
+    const name=document.createElement('strong');
+    const status=document.createElement('span');
+    const stores=document.createElement('small');
+    name.textContent=product.nombre;
+    status.textContent=product.activo?'Acceso activo':'Acceso desactivado';
+    stores.textContent=`Límite: ${product.sucursales_max} ${product.sucursales_max===1?'sucursal':'sucursales'}`;
+    const branchNames=(product.sucursales||[])
+      .filter(branch=>branch.activa)
+      .map(branch=>branch.nombre);
+    if(branchNames.length)stores.textContent+=` · ${branchNames.join(', ')}`;
+    else if(product.activo)stores.textContent+=' · Se crean al ingresar al POS';
+    item.append(name,status,stores);
+    return item;
+  }));
 }
 
 async function refreshAccount(){

@@ -46,6 +46,10 @@
 .account-details>div{display:grid;grid-template-columns:150px 1fr;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--line)}
 .account-details dt{color:var(--muted);font-size:11px}
 .account-details dd{margin:0;font-size:12px;overflow-wrap:anywhere}
+.account-software{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.account-software li{display:grid;gap:3px}
+.account-software strong{font-size:12px}
+.account-software span,.account-software small{color:var(--muted);font-size:10px}
 .license-status{display:inline-flex;padding:5px 9px;border-radius:999px;background:rgba(141,224,181,.12);color:var(--green);font-size:10px;font-weight:700}
 .license-status.is-suspended{background:rgba(244,190,112,.12);color:#f4be70}
 .license-status.is-cancelled{background:rgba(244,155,142,.12);color:var(--coral)}

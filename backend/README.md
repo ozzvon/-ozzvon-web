@@ -1,9 +1,9 @@
 # Cuenta y autenticación Ozzvon
 
-Este servicio Flask registra cuentas, inicia y cierra sesiones, devuelve los
-datos de la cuenta y permite restablecer contraseñas. Guarda los usuarios y el
-estado de licencia en la base maestra SQLite; crea una base de datos separada
-por negocio. Las bases se guardan en `backend/data/`, fuera de los archivos
+Este servicio Flask registra cuentas, inicia y cierra sesiones, administra
+planes de POS por cuenta y sucursales con una base de datos independiente por
+cada una. Guarda las cuentas, autorizaciones y rutas privadas en la base
+maestra SQLite. Las bases se guardan en `backend/data/`, fuera de los archivos
 estáticos. Las contraseñas se almacenan como hashes bcrypt.
 
 ## Ejecutar localmente
@@ -36,9 +36,10 @@ sudo /var/www/ozzvon/venv/bin/pip install -r /var/www/ozzvon/backend/requirement
 ```
 
 El archivo de la base maestra **se crea automáticamente al iniciar la app**;
-no crees las tablas a mano. Al arrancar, `backend/app.py` crea o migra
-`usuarios` y `password_resets`. Al registrar un negocio, crea su SQLite aparte
-dentro de `tenants/`.
+no crees las tablas a mano. Al arrancar, `backend/app.py` crea o migra las
+tablas de cuentas, planes, sucursales y restablecimiento de contraseña. Al
+registrar una cuenta crea su primera SQLite privada; al autorizar su primer
+POS, la vincula como base de la primera sucursal.
 
 Crea un secreto del servidor y el archivo de variables privadas:
 
@@ -162,9 +163,10 @@ servicio un momento, copia **todo** `/var/lib/ozzvon/` a un almacenamiento
 seguro y vuelve a iniciar `ozzvon`. Ese directorio contiene la cuenta maestra
 y todas las bases de los negocios. No lo pongas dentro del directorio web.
 
-Esta configuración hace que la web muestre el estado de licencia administrado
-en el VPS. Todavía se requiere conectar el software POS a la validación remota
-si también quieres bloquear su uso al suspender o dar de baja una cuenta.
+El API valida la licencia global y el plan del producto al iniciar sesión con
+la clave de software, y vuelve a validarlos en cada consulta de sucursal. Los
+programas POS deben usar estas rutas para que el servidor aplique sus planes;
+no deben conectarse directamente a los archivos SQLite.
 
 Por defecto, el servicio escucha en `127.0.0.1:5000`. Configura
 `MASTER_DB_PATH` y `TENANT_DATABASE_DIR` para elegir las rutas de las bases de
@@ -179,15 +181,19 @@ Para desarrollo local por HTTP, configura `SESSION_COOKIE_SECURE=0`; no lo
 hagas en producción. Usa HTTPS y un servidor WSGI detrás de un proxy inverso.
 No uses el servidor de desarrollo de Flask como servicio público.
 
-## Cuenta y licencias
+## Cuentas, POS y sucursales
 
 Rutas principales:
 
-- `POST /api/registro`: crea una cuenta y una base de datos de POS; inicia
-  sesión al registrarla.
+- `POST /api/registro`: crea la cuenta y su espacio de base de datos inicial;
+  inicia sesión en el portal. Una cuenta nueva no recibe un plan POS activo.
 - `POST /api/auth/login` y `POST /api/auth/logout`: inicia y cierra sesión.
-- `GET /api/cuenta`: devuelve nombre del negocio, correo, fecha de registro y
-  licencia para la sesión actual.
+- `GET /api/cuenta`: incluye los productos asignados, su estado y el límite de
+  sucursales, además de los datos de la cuenta.
+- `GET /api/software/<clave>/sucursales`: requiere sesión y plan activo; crea
+  las bases que falten y devuelve únicamente sucursales autorizadas.
+- `GET /api/software/<clave>/sucursales/<id>/datos`: devuelve hasta 100
+  productos, clientes y ventas de esa sucursal y cuenta.
 - `POST /api/auth/forgot-password` y `POST /api/auth/reset-password`: envía un
   enlace de un solo uso con vencimiento de una hora y cambia la contraseña.
 - `GET /api/auth/config` y `POST /api/auth/google`: configuran y verifican el
@@ -197,21 +203,47 @@ La contraseña debe tener entre 8 y 72 bytes UTF-8 (límite de bcrypt). El
 restablecimiento solo se habilita cuando SMTP está configurado; sin servicio de
 correo el endpoint responde `503`, no simula el envío.
 
-El servidor es la autoridad del estado de licencia. Una cuenta nueva comienza
-como `activa`; para suspenderla o darla de baja, administra la base maestra en
-el servidor:
+El servidor es la autoridad tanto de la licencia global como de los planes
+por producto. Los identificadores estables son `pos_comercio` y
+`pos_restaurante`; los nombres visibles se editan en `software_catalog`, sin
+cambiar esos identificadores en los programas cliente. Las cuentas nuevas
+comienzan con ambos planes desactivados y una sucursal autorizada por plan.
+Para activar un plan y permitir cinco sucursales, administra la base maestra
+en el servidor:
 
 ```sql
+SELECT id, nombre_negocio, email FROM usuarios;
+SELECT usuario_id, software_key, activo, sucursales_max FROM usuario_software;
+UPDATE usuario_software
+SET activo = 1, sucursales_max = 5
+WHERE usuario_id = 1 AND software_key = 'pos_comercio';
+UPDATE software_catalog
+SET nombre = 'OZZVON POS Comercio'
+WHERE clave = 'pos_comercio';
+
 UPDATE usuarios SET licencia_estado = 'suspendida' WHERE email = 'cliente@ejemplo.com';
 UPDATE usuarios SET licencia_estado = 'baja' WHERE email = 'cliente@ejemplo.com';
 UPDATE usuarios SET licencia_estado = 'activa' WHERE email = 'cliente@ejemplo.com';
 ```
 
-Los únicos estados permitidos son `activa`, `suspendida` y `baja`. El portal
-consulta el estado actualizado desde el servidor cada vez que se abre la
-cuenta. Esto muestra el estado en la web; no bloquea por sí solo los programas
-de escritorio. Para aplicar la licencia en esos programas, sus APIs de
-activación también deben consultar `licencia_estado` en esta base maestra.
+Los estados globales válidos son `activa`, `suspendida` y `baja`. El software
+cliente debe enviar su clave estable al iniciar sesión, por ejemplo
+`{"email":"cliente@ejemplo.com","password":"...","software":"pos_comercio"}`.
+El servidor rechaza el acceso si la licencia global o ese plan están
+desactivados. En el inicio autorizado responde con los datos de cuenta y las
+sucursales; conserva la cookie de sesión para consultar esos datos y sus APIs.
+
+Cada sucursal tiene una base SQLite independiente. Si se amplía el límite, las
+bases adicionales se crean al siguiente inicio de sesión o consulta de
+sucursales. Si se reduce, las sucursales que excedan el límite quedan
+deshabilitadas, pero sus archivos no se borran. El servidor conserva las rutas
+privadas de las bases: el cliente debe leer y escribir mediante la API
+autorizada, nunca conectarse directamente a los archivos SQLite ni aceptar una
+ruta de base de datos enviada por el cliente.
+
+Las cuentas anteriores a esta actualización conservan acceso al POS de
+comercio cuando su licencia global está activa. Deben asignarse manualmente
+otros productos desde `usuario_software`.
 
 ## Restablecimiento por correo
 

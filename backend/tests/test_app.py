@@ -43,8 +43,23 @@ class RegistrationApiTests(unittest.TestCase):
         payload.update(overrides)
         return self.client.post("/api/registro", json=payload)
 
+    def activate_software(self, software_key, branch_limit=1, email="dueno@example.com"):
+        with closing(sqlite3.connect(self.master_path)) as connection, connection:
+            connection.execute(
+                """
+                UPDATE usuario_software
+                SET activo = 1, sucursales_max = ?
+                WHERE usuario_id = (
+                    SELECT id FROM usuarios WHERE email = ?
+                ) AND software_key = ?
+                """,
+                (branch_limit, email, software_key),
+            )
+
     def test_master_database_migrates_existing_user_table(self):
         legacy_path = Path(self.temp_directory.name) / "legacy.db"
+        legacy_tenant_path = Path(self.temp_directory.name) / "legacy-tenant.db"
+        legacy_tenant_path.touch()
         with closing(sqlite3.connect(legacy_path)) as connection, connection:
             connection.execute(
                 """
@@ -57,6 +72,20 @@ class RegistrationApiTests(unittest.TestCase):
                     fecha_creacion TEXT NOT NULL
                 )
                 """
+            )
+            connection.execute(
+                """
+                INSERT INTO usuarios (
+                    nombre_negocio, email, password_hash, db_path, fecha_creacion
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    "Negocio anterior",
+                    "anterior@example.com",
+                    "hash",
+                    str(legacy_tenant_path),
+                    datetime.now(timezone.utc).isoformat(),
+                ),
             )
         legacy_app = create_app(
             {
@@ -77,6 +106,33 @@ class RegistrationApiTests(unittest.TestCase):
         self.assertIn("licencia_estado", columns)
         self.assertIn("google_sub", columns)
         self.assertIsNotNone(invalid_status)
+        with closing(sqlite3.connect(legacy_path)) as connection:
+            account_tables = {
+                row[0]
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                )
+            }
+        self.assertTrue(
+            {"software_catalog", "usuario_software", "sucursales"}.issubset(
+                account_tables
+            )
+        )
+        with closing(sqlite3.connect(legacy_path)) as connection:
+            legacy_plan = connection.execute(
+                """
+                SELECT activo, sucursales_max FROM usuario_software
+                WHERE usuario_id = 1 AND software_key = 'pos_comercio'
+                """
+            ).fetchone()
+            legacy_branch = connection.execute(
+                """
+                SELECT numero, db_path FROM sucursales
+                WHERE usuario_id = 1 AND software_key = 'pos_comercio'
+                """
+            ).fetchone()
+        self.assertEqual(legacy_plan, (1, 1))
+        self.assertEqual(legacy_branch, (1, str(legacy_tenant_path)))
         self.assertIsNotNone(legacy_app)
 
     def test_register_creates_hashed_user_and_pos_tables(self):
@@ -102,6 +158,183 @@ class RegistrationApiTests(unittest.TestCase):
                 )
             }
         self.assertTrue({"productos", "clientes", "ventas"}.issubset(tables))
+        account_response = self.client.get("/api/cuenta")
+        self.assertEqual(account_response.status_code, 200)
+        products = account_response.json["cuenta"]["software"]
+        self.assertEqual(
+            {product["clave"] for product in products},
+            {"pos_comercio", "pos_restaurante"},
+        )
+        self.assertTrue(all(not product["activo"] for product in products))
+        self.assertNotIn("db_path", account_response.json["cuenta"])
+        with closing(sqlite3.connect(self.master_path)) as connection, connection:
+            connection.execute(
+                "UPDATE software_catalog SET nombre = ? WHERE clave = ?",
+                ("Ozzvon Comercio", "pos_comercio"),
+            )
+        renamed_products = self.client.get("/api/cuenta").json["cuenta"]["software"]
+        self.assertEqual(
+            next(
+                product["nombre"]
+                for product in renamed_products
+                if product["clave"] == "pos_comercio"
+            ),
+            "Ozzvon Comercio",
+        )
+
+    def test_software_login_requires_server_enabled_plan(self):
+        self.assertEqual(self.register().status_code, 201)
+
+        response = self.client.post(
+            "/api/auth/login",
+            json={
+                "email": "dueno@example.com",
+                "password": "una-clave-segura",
+                "software": "pos_comercio",
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("plan", response.json["mensaje"])
+        self.assertEqual(self.client.get("/api/cuenta").status_code, 401)
+        with closing(sqlite3.connect(self.master_path)) as connection:
+            branch_count = connection.execute(
+                "SELECT COUNT(*) FROM sucursales"
+            ).fetchone()[0]
+        self.assertEqual(branch_count, 0)
+
+    def test_software_login_provisions_isolated_store_databases_and_scoped_data(self):
+        self.assertEqual(self.register().status_code, 201)
+        self.activate_software("pos_restaurante", branch_limit=5)
+        self.activate_software("pos_comercio", branch_limit=1)
+        client = self.app.test_client()
+
+        restaurant_login = client.post(
+            "/api/auth/login",
+            json={
+                "email": "dueno@example.com",
+                "password": "una-clave-segura",
+                "software": "pos_restaurante",
+            },
+        )
+
+        self.assertEqual(restaurant_login.status_code, 200)
+        self.assertEqual(restaurant_login.json["software"]["clave"], "pos_restaurante")
+        self.assertEqual(len(restaurant_login.json["sucursales"]), 5)
+        self.assertTrue(
+            all(branch["activa"] for branch in restaurant_login.json["sucursales"])
+        )
+        self.assertTrue(
+            all("db_path" not in branch for branch in restaurant_login.json["sucursales"])
+        )
+        branch_ids = [branch["id"] for branch in restaurant_login.json["sucursales"]]
+        with closing(sqlite3.connect(self.master_path)) as connection:
+            paths = [
+                row[0]
+                for row in connection.execute(
+                    "SELECT db_path FROM sucursales WHERE software_key = 'pos_restaurante' "
+                    "ORDER BY numero"
+                )
+            ]
+        self.assertEqual(len(set(paths)), 5)
+        self.assertTrue(all(Path(path).is_file() for path in paths))
+
+        with closing(sqlite3.connect(paths[0])) as connection, connection:
+            connection.execute(
+                """
+                INSERT INTO productos (codigo, nombre, precio_compra, precio_venta, stock)
+                VALUES ('P-1', 'Producto restaurante', 20, 30, 4)
+                """
+            )
+        data_response = client.get(
+            f"/api/software/pos_restaurante/sucursales/{branch_ids[0]}/datos"
+        )
+        self.assertEqual(data_response.status_code, 200)
+        self.assertEqual(
+            data_response.json["datos"]["productos"][0]["nombre"],
+            "Producto restaurante",
+        )
+
+        commerce_login = client.post(
+            "/api/auth/login",
+            json={
+                "email": "dueno@example.com",
+                "password": "una-clave-segura",
+                "software": "pos_comercio",
+            },
+        )
+        self.assertEqual(commerce_login.status_code, 200)
+        with closing(sqlite3.connect(self.master_path)) as connection:
+            commerce_path = connection.execute(
+                "SELECT db_path FROM sucursales WHERE software_key = 'pos_comercio'"
+            ).fetchone()[0]
+        self.assertNotIn(commerce_path, paths)
+
+    def test_account_software_login_rejects_suspended_license_and_foreign_branch(self):
+        self.assertEqual(self.register().status_code, 201)
+        self.activate_software("pos_comercio")
+        with closing(sqlite3.connect(self.master_path)) as connection, connection:
+            connection.execute(
+                "UPDATE usuarios SET licencia_estado = 'suspendida' WHERE email = ?",
+                ("dueno@example.com",),
+            )
+
+        suspended = self.app.test_client().post(
+            "/api/auth/login",
+            json={
+                "email": "dueno@example.com",
+                "password": "una-clave-segura",
+                "software": "pos_comercio",
+            },
+        )
+        self.assertEqual(suspended.status_code, 403)
+
+        with closing(sqlite3.connect(self.master_path)) as connection, connection:
+            connection.execute(
+                "UPDATE usuarios SET licencia_estado = 'activa' WHERE email = ?",
+                ("dueno@example.com",),
+            )
+        owner_client = self.app.test_client()
+        owner_login = owner_client.post(
+            "/api/auth/login",
+            json={
+                "email": "dueno@example.com",
+                "password": "una-clave-segura",
+                "software": "pos_comercio",
+            },
+        )
+        foreign_branch_id = owner_login.json["sucursales"][0]["id"]
+
+        other_client = self.app.test_client()
+        self.assertEqual(
+            other_client.post(
+                "/api/registro",
+                json={
+                    "nombre_negocio": "Otro negocio",
+                    "email": "otro@example.com",
+                    "password": "otra-clave-segura",
+                },
+            ).status_code,
+            201,
+        )
+        self.activate_software("pos_comercio", email="otro@example.com")
+        self.assertEqual(
+            other_client.post(
+                "/api/auth/login",
+                json={
+                    "email": "otro@example.com",
+                    "password": "otra-clave-segura",
+                    "software": "pos_comercio",
+                },
+            ).status_code,
+            200,
+        )
+        self.assertEqual(
+            other_client.get(
+                f"/api/software/pos_comercio/sucursales/{foreign_branch_id}/datos"
+            ).status_code,
+            404,
+        )
 
     def test_login_and_account_show_server_managed_license_status(self):
         self.assertEqual(self.register().status_code, 201)
