@@ -135,7 +135,7 @@ class RegistrationApiTests(unittest.TestCase):
         self.assertEqual(legacy_branch, (1, str(legacy_tenant_path)))
         self.assertIsNotNone(legacy_app)
 
-    def test_register_creates_hashed_user_and_pos_tables(self):
+    def test_register_waits_for_plan_before_creating_software_schema(self):
         response = self.register()
 
         self.assertEqual(response.status_code, 201)
@@ -149,15 +149,7 @@ class RegistrationApiTests(unittest.TestCase):
         self.assertEqual(user[1], "dueno@example.com")
         self.assertTrue(bcrypt.checkpw(b"una-clave-segura", user[2].encode("ascii")))
         tenant_path = Path(user[3])
-        self.assertTrue(tenant_path.is_file())
-        with closing(sqlite3.connect(tenant_path)) as connection, connection:
-            tables = {
-                row[0]
-                for row in connection.execute(
-                    "SELECT name FROM sqlite_master WHERE type = 'table'"
-                )
-            }
-        self.assertTrue({"productos", "clientes", "ventas"}.issubset(tables))
+        self.assertFalse(tenant_path.exists())
         account_response = self.client.get("/api/cuenta")
         self.assertEqual(account_response.status_code, 200)
         products = account_response.json["cuenta"]["software"]
@@ -181,6 +173,84 @@ class RegistrationApiTests(unittest.TestCase):
             ),
             "Ozzvon Comercio",
         )
+
+        self.activate_software("pos_comercio")
+        login_response = self.client.post(
+            "/api/auth/login",
+            json={
+                "email": "dueno@example.com",
+                "password": "una-clave-segura",
+                "software": "pos_comercio",
+            },
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertTrue(tenant_path.is_file())
+        with closing(sqlite3.connect(tenant_path)) as connection:
+            tables = {
+                row[0]
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master "
+                    "WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+                )
+            }
+            tables_for_pos = {
+                "clientes", "productos", "cajas", "movimientos_caja", "roles",
+                "usuarios", "ventas", "detalle_ventas", "ajustes", "facturas",
+                "ticket_templates", "proveedores", "compras", "detalle_compras",
+            }
+            self.assertEqual(tables, tables_for_pos)
+            self.assertEqual(
+                connection.execute(
+                    "SELECT valor FROM ajustes WHERE clave = 'business_name'"
+                ).fetchone()[0],
+                "Mi negocio",
+            )
+
+    def test_each_restaurant_branch_uses_restaurant_schema(self):
+        self.assertEqual(self.register().status_code, 201)
+        self.activate_software("pos_restaurante", branch_limit=3)
+
+        response = self.client.post(
+            "/api/auth/login",
+            json={
+                "email": "dueno@example.com",
+                "password": "una-clave-segura",
+                "software": "pos_restaurante",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json["sucursales"]), 3)
+        with closing(sqlite3.connect(self.master_path)) as connection:
+            paths = [
+                row[0]
+                for row in connection.execute(
+                    "SELECT db_path FROM sucursales "
+                    "WHERE software_key = 'pos_restaurante' ORDER BY numero"
+                )
+            ]
+        expected_tables = {
+            "menus", "settings", "categories", "products", "product_sizes",
+            "orders", "order_items",
+        }
+        self.assertEqual(len(paths), 3)
+        self.assertEqual(len(set(paths)), 3)
+        for path in paths:
+            with closing(sqlite3.connect(path)) as connection:
+                tables = {
+                    row[0]
+                    for row in connection.execute(
+                        "SELECT name FROM sqlite_master "
+                        "WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+                    )
+                }
+                self.assertEqual(tables, expected_tables)
+                self.assertEqual(
+                    connection.execute(
+                        "SELECT value FROM settings WHERE key = 'name'"
+                    ).fetchone()[0],
+                    "Mi negocio",
+                )
 
     def test_software_login_requires_server_enabled_plan(self):
         self.assertEqual(self.register().status_code, 201)
@@ -238,12 +308,39 @@ class RegistrationApiTests(unittest.TestCase):
             ]
         self.assertEqual(len(set(paths)), 5)
         self.assertTrue(all(Path(path).is_file() for path in paths))
+        expected_tables = {
+            "menus", "settings", "categories", "products", "product_sizes",
+            "orders", "order_items",
+        }
+        store_schemas = []
+        for path in paths:
+            with closing(sqlite3.connect(path)) as connection:
+                store_schemas.append(
+                    {
+                        row[0]
+                        for row in connection.execute(
+                            "SELECT name FROM sqlite_master "
+                            "WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+                        )
+                    }
+                )
+        self.assertTrue(all(schema == expected_tables for schema in store_schemas))
 
         with closing(sqlite3.connect(paths[0])) as connection, connection:
             connection.execute(
                 """
-                INSERT INTO productos (codigo, nombre, precio_compra, precio_venta, stock)
-                VALUES ('P-1', 'Producto restaurante', 20, 30, 4)
+                INSERT INTO categories (id, menu_id, name)
+                VALUES ('cat-1', 'menu-default', 'Comida')
+                """
+            )
+            connection.execute(
+                "INSERT INTO products (id, category_id, name) VALUES (?, ?, ?)",
+                ("prod-1", "cat-1", "Producto restaurante"),
+            )
+            connection.execute(
+                """
+                INSERT INTO product_sizes (product_id, name, price)
+                VALUES ('prod-1', 'Única', 30)
                 """
             )
         data_response = client.get(
@@ -251,7 +348,7 @@ class RegistrationApiTests(unittest.TestCase):
         )
         self.assertEqual(data_response.status_code, 200)
         self.assertEqual(
-            data_response.json["datos"]["productos"][0]["nombre"],
+            data_response.json["datos"]["products"][0]["name"],
             "Producto restaurante",
         )
 

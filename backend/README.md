@@ -37,9 +37,10 @@ sudo /var/www/ozzvon/venv/bin/pip install -r /var/www/ozzvon/backend/requirement
 
 El archivo de la base maestra **se crea automáticamente al iniciar la app**;
 no crees las tablas a mano. Al arrancar, `backend/app.py` crea o migra las
-tablas de cuentas, planes, sucursales y restablecimiento de contraseña. Al
-registrar una cuenta crea su primera SQLite privada; al autorizar su primer
-POS, la vincula como base de la primera sucursal.
+tablas de cuentas, planes, sucursales y restablecimiento de contraseña. El
+registro no crea una base vacía. Cuando el servidor activa el plan e inicia
+sesión el software correspondiente, se crea la primera base privada usando la
+plantilla de ese POS.
 
 Crea un secreto del servidor y el archivo de variables privadas:
 
@@ -240,6 +241,18 @@ deshabilitadas, pero sus archivos no se borran. El servidor conserva las rutas
 privadas de las bases: el cliente debe leer y escribir mediante la API
 autorizada, nunca conectarse directamente a los archivos SQLite ni aceptar una
 ruta de base de datos enviada por el cliente.
+
+Las plantillas versionadas por el proyecto están en `backend/schema/`:
+
+- `pos_comercio.sql`: tablas de clientes, productos, ventas, partidas, cajas,
+  usuarios/roles, compras, facturas, ajustes y formatos de ticket.
+- `pos_restaurante.sql`: tablas de menús, categorías, productos, tamaños,
+  pedidos, partidas de pedido y ajustes.
+
+El backend aplica la plantilla elegida de forma idempotente al crear y al
+revalidar cada sucursal activa. Por tanto, las sucursales adicionales usan el
+mismo esquema y sus datos permanecen aislados. Mantén estos archivos alineados
+con las inicializaciones SQL de cada POS cuando cambie su modelo.
 
 Las cuentas anteriores a esta actualización conservan acceso al POS de
 comercio cuando su licencia global está activa. Deben asignarse manualmente

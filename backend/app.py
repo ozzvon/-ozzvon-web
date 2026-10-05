@@ -166,49 +166,80 @@ def _initialize_master_database(database_path: Path) -> None:
                 )
 
 
-def _initialize_tenant_database(database_path: Path) -> None:
+def _initialize_tenant_database(database_path: Path, software_key: str) -> None:
+    if software_key not in SOFTWARE_CATALOG:
+        raise ValueError(f"Plantilla de software no reconocida: {software_key}")
+    schema_path = Path(__file__).parent / "schema" / f"{software_key}.sql"
+    schema = schema_path.read_text(encoding="utf-8")
     database_path.parent.mkdir(parents=True, exist_ok=True)
     database_existed = database_path.exists()
     try:
         with closing(_connect(database_path)) as connection, connection:
             connection.execute("PRAGMA foreign_keys = ON")
-            connection.executescript(
-                """
-                CREATE TABLE IF NOT EXISTS productos (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    codigo TEXT UNIQUE NOT NULL,
-                    nombre TEXT NOT NULL,
-                    precio_compra REAL NOT NULL,
-                    precio_venta REAL NOT NULL,
-                    stock INTEGER NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS clientes (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    nombre TEXT NOT NULL,
-                    telefono TEXT,
-                    saldo_deudor REAL NOT NULL DEFAULT 0
-                );
-                CREATE TABLE IF NOT EXISTS ventas (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    fecha TEXT NOT NULL,
-                    total REAL NOT NULL,
-                    subtotal REAL,
-                    iva REAL,
-                    tasa_iva REAL,
-                    metodo_pago TEXT NOT NULL DEFAULT 'Efectivo',
-                    cliente_id INTEGER,
-                    FOREIGN KEY (cliente_id) REFERENCES clientes(id)
-                );
-                CREATE TABLE IF NOT EXISTS ozzvon_info (
-                    clave TEXT PRIMARY KEY,
-                    valor TEXT NOT NULL
-                );
-                """
-            )
+            connection.executescript(schema)
+            if software_key == "pos_comercio":
+                for column, definition in (
+                    ("subtotal", "REAL"),
+                    ("iva", "REAL"),
+                    ("tasa_iva", "REAL"),
+                    ("usuario_id", "INTEGER"),
+                ):
+                    _ensure_tenant_column(
+                        connection, "ventas", column, definition
+                    )
+                _ensure_tenant_column(connection, "cajas", "usuario_id", "INTEGER")
+                _ensure_tenant_column(
+                    connection, "movimientos_caja", "usuario_id", "INTEGER"
+                )
+            else:
+                _ensure_tenant_column(
+                    connection,
+                    "categories",
+                    "menu_id",
+                    "TEXT REFERENCES menus(id) ON DELETE CASCADE",
+                )
+                connection.execute(
+                    "UPDATE categories SET menu_id = 'menu-default' WHERE menu_id IS NULL"
+                )
+                for column, definition in (
+                    ("payment_method", "TEXT"),
+                    ("amount_received", "REAL"),
+                    ("change_amount", "REAL NOT NULL DEFAULT 0"),
+                    ("source", "TEXT NOT NULL DEFAULT 'pos'"),
+                    ("source_message_id", "TEXT"),
+                ):
+                    _ensure_tenant_column(connection, "orders", column, definition)
+                _ensure_tenant_column(
+                    connection, "order_items", "source_product_id", "TEXT"
+                )
+                connection.execute(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_source_message_id "
+                    "ON orders(source_message_id)"
+                )
+                connection.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_categories_menu_id "
+                    "ON categories(menu_id)"
+                )
     except sqlite3.Error:
         if not database_existed:
             database_path.unlink(missing_ok=True)
         raise
+
+
+def _ensure_tenant_column(
+    connection: sqlite3.Connection,
+    table: str,
+    column: str,
+    definition: str,
+) -> None:
+    columns = {
+        row["name"]
+        for row in connection.execute(f'PRAGMA table_info("{table}")')
+    }
+    if column not in columns:
+        connection.execute(
+            f'ALTER TABLE "{table}" ADD COLUMN "{column}" {definition}'
+        )
 
 
 def _error(message: str, status: int):
@@ -308,7 +339,7 @@ def _ensure_software_branches(user_id: int, software_key: str) -> list[dict[str,
     with closing(_connect(master_path)) as connection, connection:
         account = connection.execute(
             """
-            SELECT u.db_path, us.sucursales_max
+            SELECT u.db_path, u.nombre_negocio, us.sucursales_max
             FROM usuarios AS u
             JOIN usuario_software AS us ON us.usuario_id = u.id
             WHERE u.id = ? AND us.software_key = ?
@@ -337,14 +368,8 @@ def _ensure_software_branches(user_id: int, software_key: str) -> list[dict[str,
             else:
                 database_path = tenant_directory / f"cliente_{secrets.token_hex(16)}.db"
             was_present = database_path.is_file()
-            _initialize_tenant_database(database_path)
+            _initialize_tenant_database(database_path, software_key)
             try:
-                with closing(_connect(database_path)) as tenant_connection, tenant_connection:
-                    tenant_connection.execute(
-                        "INSERT INTO ozzvon_info (clave, valor) VALUES ('software_key', ?) "
-                        "ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor",
-                        (software_key,),
-                    )
                 connection.execute(
                     """
                     INSERT INTO sucursales (
@@ -364,6 +389,38 @@ def _ensure_software_branches(user_id: int, software_key: str) -> list[dict[str,
                 if number != 1 and not was_present:
                     database_path.unlink(missing_ok=True)
                 raise
+        active_branch_rows = connection.execute(
+            """
+            SELECT id, numero, nombre, db_path FROM sucursales
+            WHERE usuario_id = ? AND software_key = ? AND numero <= ?
+            ORDER BY numero
+            """,
+            (user_id, software_key, account["sucursales_max"]),
+        ).fetchall()
+        for branch in active_branch_rows:
+            database_path = Path(branch["db_path"])
+            if not database_path.is_file():
+                raise FileNotFoundError(
+                    f"No existe la base asignada a la sucursal {branch['id']}."
+                )
+            _initialize_tenant_database(database_path, software_key)
+            with closing(_connect(database_path)) as tenant_connection, tenant_connection:
+                if software_key == "pos_comercio":
+                    tenant_connection.execute(
+                        """
+                        UPDATE ajustes SET valor = ?
+                        WHERE clave = 'business_name' AND valor = 'OZZVON POS'
+                        """,
+                        (account["nombre_negocio"],),
+                    )
+                else:
+                    tenant_connection.execute(
+                        """
+                        UPDATE settings SET value = ?
+                        WHERE key = 'name' AND value = ''
+                        """,
+                        (account["nombre_negocio"],),
+                    )
         connection.execute(
             """
             UPDATE sucursales SET activa = CASE WHEN numero <= ? THEN 1 ELSE 0 END
@@ -502,19 +559,9 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         master_database_path = Path(current_app.config["MASTER_DB_PATH"])
         tenant_directory = Path(current_app.config["TENANT_DATABASE_DIR"])
         tenant_path = tenant_directory / f"cliente_{secrets.token_hex(8)}.db"
-        try:
-            password_hash = bcrypt.hashpw(
-                password.encode("utf-8"), bcrypt.gensalt()
-            ).decode("ascii")
-            _initialize_tenant_database(tenant_path)
-        except sqlite3.Error:
-            tenant_path.unlink(missing_ok=True)
-            current_app.logger.exception("No se pudo inicializar la base de datos del negocio.")
-            return _error("No se pudo crear la base de datos del negocio.", 500)
-        except OSError:
-            tenant_path.unlink(missing_ok=True)
-            current_app.logger.exception("No se pudo crear la base de datos del negocio.")
-            return _error("No se pudo crear la base de datos del negocio.", 500)
+        password_hash = bcrypt.hashpw(
+            password.encode("utf-8"), bcrypt.gensalt()
+        ).decode("ascii")
 
         try:
             with closing(_connect(master_database_path)) as connection, connection:
@@ -687,14 +734,22 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             if branch is None:
                 return _error("La sucursal no existe o no está habilitada.", 404)
             with closing(_connect(Path(branch["db_path"]))) as connection:
+                table_names = (
+                    ("clientes", "productos", "cajas", "movimientos_caja", "ventas",
+                     "detalle_ventas", "ajustes", "facturas", "proveedores", "compras",
+                     "detalle_compras")
+                    if software_key == "pos_comercio"
+                    else ("menus", "settings", "categories", "products", "product_sizes",
+                          "orders", "order_items")
+                )
                 data = {
                     table: [
                         dict(row)
                         for row in connection.execute(
-                            f'SELECT * FROM "{table}" ORDER BY id DESC LIMIT 100'
+                            f'SELECT * FROM "{table}" LIMIT 100'
                         ).fetchall()
                     ]
-                    for table in ("productos", "clientes", "ventas")
+                    for table in table_names
                 }
         except (sqlite3.Error, OSError):
             current_app.logger.exception("No se pudieron consultar los datos de la sucursal.")
@@ -769,7 +824,6 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
                 tenant_directory = Path(current_app.config["TENANT_DATABASE_DIR"])
                 tenant_path = tenant_directory / f"cliente_{secrets.token_hex(8)}.db"
                 try:
-                    _initialize_tenant_database(tenant_path)
                     password_hash = bcrypt.hashpw(
                         secrets.token_bytes(32), bcrypt.gensalt()
                     ).decode("ascii")
